@@ -5,6 +5,7 @@ import {createMemoryHistory, createRouter, RouteRecordRaw} from "vue-router";
 import NewConnectionView from "@/views/NewConnectionView.vue";
 import WelcomeView from "@/views/WelcomeView.vue";
 import {createPinia} from "pinia";
+import {registerEventListeners} from "@/lib/eventHandler.ts";
 
 const routes: RouteRecordRaw[] = [
     {path: "/", component: WelcomeView},
@@ -19,6 +20,9 @@ const router = createRouter({
 const app = createApp(App);
 const pinia = createPinia();
 
-app.use(router).use(pinia)
+registerEventListeners();
 
-app.mount('#app')
+app.use(router).use(pinia);
+
+app.mount('#app');
+

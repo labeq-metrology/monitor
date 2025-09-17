@@ -1,21 +1,14 @@
 use crate::mqtt::*;
-use std::fs;
+use crate::plugins::*;
 use tauri::{AppHandle, Manager};
-use tauri::utils::platform::resource_dir;
 
 mod mqtt;
+mod plugins;
+mod errors;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 struct MonitorData {
     gateway_connected: bool,
-}
-
-#[tauri::command]
-fn load_plugin(app: AppHandle, path: String) -> Result<String, String> {
-    let plugin_path = app.path().resource_dir()
-        .expect("Failed to get resource dir")
-        .join(path);
-    fs::read_to_string(plugin_path).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,7 +20,7 @@ pub fn run() {
             gateway_connect,
             gateway_disconnect,
             check_connection,
-            load_plugin
+            init_plugins
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

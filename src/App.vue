@@ -1,11 +1,18 @@
 <script setup lang="ts">
+import {invoke} from "@tauri-apps/api/core";
+
+import {Toaster} from '@/components/ui/sonner'
 import Navbar from "@/components/monitor/navbar/Navbar.vue";
 import {SidebarProvider} from "@/components/ui/sidebar";
 import AppSidebar from "@/components/monitor/sidebar/AppSidebar.vue";
+import 'vue-sonner/style.css'
+
+invoke('init_plugins').then(() => console.log('aa')).catch(() => 'err')
 </script>
 
 <template>
   <div>
+    <Toaster/>
     <SidebarProvider class="flex">
       <AppSidebar/>
       <main class="w-full">

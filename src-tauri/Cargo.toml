@@ -26,4 +26,5 @@ rumqttc = "0.24.0"
 lazy_static = "1.5.0"
 tokio = "1.46.1"
 tauri-plugin-fs = "2"
+extism = "1.12.0"
 
