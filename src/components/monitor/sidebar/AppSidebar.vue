@@ -7,7 +7,7 @@ import {
   SidebarMenu,
   SidebarMenuButton, SidebarMenuSubButton,
 } from "@/components/ui/sidebar"
-import {CollapsibleTrigger, TooltipRoot} from "reka-ui";
+import {TooltipRoot} from "reka-ui";
 import {Collapsible, CollapsibleContent} from "@/components/ui/collapsible";
 import {Icon} from "@iconify/vue";
 import {Button} from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {useConnectionStore} from "@/store/connection.store.ts";
 // import {reactive} from "vue";
 // import {LabeqDevice} from "@/lib/device.ts";
 import {listen} from "@tauri-apps/api/event";
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import ConnectionButton from "@/components/monitor/sidebar/ConnectionButton.vue";
 
 const connectionStore = useConnectionStore()

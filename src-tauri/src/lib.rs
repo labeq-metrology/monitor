@@ -1,10 +1,11 @@
 use crate::mqtt::*;
 use crate::plugins::*;
-use tauri::{AppHandle, Manager};
+use crate::settings::open_settings;
 
 mod mqtt;
 mod plugins;
 mod errors;
+mod settings;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 struct MonitorData {
@@ -20,7 +21,10 @@ pub fn run() {
             gateway_connect,
             gateway_disconnect,
             check_connection,
-            init_plugins
+            init_plugins,
+            list_plugins,
+            load_layout,
+            open_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

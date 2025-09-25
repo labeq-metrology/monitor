@@ -40,4 +40,13 @@ export default defineConfig(async () => ({
             ignored: ["**/src-tauri/**", "**/plugins/**"],
         },
     },
+
+    build: {
+        rollupOptions: {
+            input: {
+                main: path.resolve(__dirname, 'index.html'),
+                settings: path.resolve(__dirname, 'settings.html'),
+            }
+        }
+    }
 }));
