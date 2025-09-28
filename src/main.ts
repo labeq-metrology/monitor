@@ -10,7 +10,6 @@ import {registerEventListeners} from "@/lib/eventHandler.ts";
 const routes: RouteRecordRaw[] = [
     {path: "/", component: WelcomeView},
     {path: "/new-connection", component: NewConnectionView},
-    // {path: "/settings", component: () => import("@/views/SettingsView.vue")},
 ];
 
 const router = createRouter({
