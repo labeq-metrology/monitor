@@ -17,7 +17,8 @@ pub async fn open_settings(app: AppHandle) -> Result<(), String> {
                 WebviewUrl::App("settings.html".into()),
             )
                 .title("Settings")
-                .inner_size(600.0, 480.0)
+                .inner_size(800.0, 480.0)
+                .min_inner_size(800.0, 480.0)
                 .resizable(true)
                 .closable(true)
                 .build()

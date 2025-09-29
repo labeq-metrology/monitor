@@ -3,7 +3,9 @@
     <SidebarProvider class="flex">
       <Sidebar variant="sidebar">
         <SidebarHeader>
-          Settings
+          <div class="px-2 text-muted-foreground text-sm">
+            <h1>Settings</h1>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup v-for="group in Object.keys(settingsStructure)" :key="group">
