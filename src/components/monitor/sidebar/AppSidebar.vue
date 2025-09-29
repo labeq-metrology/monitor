@@ -37,7 +37,6 @@ listen("mqtt-publish", event => console.log(event))
         <SidebarGroup>
           <SidebarGroupLabel>Connections</SidebarGroupLabel>
           <SidebarMenu>
-            <!-- New Connection Button -->
             <SidebarMenuButton asChild class="bg-background justify-center text-muted-foreground">
               <RouterLink to="new-connection">
                 <Button variant="ghost">

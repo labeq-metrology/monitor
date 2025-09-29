@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-background w-full">
-    <SidebarProvider class="flex">
-      <Sidebar variant="sidebar">
+  <div class="bg-background w-full h-screen">
+    <SidebarProvider class="flex h-full">
+      <Sidebar variant="sidebar" class="h-full">
         <SidebarHeader>
           <div class="px-2 text-muted-foreground text-sm">
             <h1>Settings</h1>
@@ -11,19 +11,24 @@
           <SidebarGroup v-for="group in Object.keys(settingsStructure)" :key="group">
             <SidebarGroupLabel class="capitalize">{{ group }}</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenuSubButton v-for="setting in settingsStructure[group]" :key="setting"
-                                    class="capitalize cursor-pointer"
-                                    :class="{ 'bg-sidebar-accent': route.name === setting }"
-                                    @click="router.push(setting)">
+              <SidebarMenuSubButton
+                  v-for="setting in settingsStructure[group]"
+                  :key="setting"
+                  class="capitalize cursor-pointer"
+                  :class="{ 'bg-sidebar-accent': route.name === setting }"
+                  @click="router.push(setting)"
+              >
                 {{ setting }}
               </SidebarMenuSubButton>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
-      <article class="p-5 justify-self-center flex w-full lg:w-3/5 justify-center mx-auto">
+
+      <!-- flex + h-full to stretch -->
+      <article class="p-5 flex w-full lg:w-3/5 justify-center h-full overflow-y-auto mx-auto">
         <Suspense>
-          <router-view class="justify-self-center w-full"/>
+          <router-view class="h-full" />
         </Suspense>
       </article>
     </SidebarProvider>
