@@ -22,7 +22,7 @@ export const useConnectionStore = defineStore('connections', () => {
         if (!connections.has(event.payload.id)) return;
         const connection = connections.get(event.payload.id)!!;
         connection.connected = true;
-        refreshDeviceList(connection);
+        await refreshDeviceList(connection);
     })
 
     listen<MqttConnectionEvent>('mqtt-disconnected', async (event) => {

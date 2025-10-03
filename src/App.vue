@@ -7,12 +7,14 @@ import {SidebarProvider} from "@/components/ui/sidebar";
 import AppSidebar from "@/components/monitor/sidebar/AppSidebar.vue";
 import 'vue-sonner/style.css'
 
-invoke('init_plugins').then(() => console.log('aa')).catch(() => 'err')
+invoke('init_plugins')
 </script>
 
 <template>
   <div>
-    <Toaster/>
+    <Toaster :toast-options="{
+      style: { }
+    }" />
     <SidebarProvider class="flex">
       <AppSidebar/>
       <main class="w-full">
@@ -21,7 +23,7 @@ invoke('init_plugins').then(() => console.log('aa')).catch(() => 'err')
         </header>
         <article class="p-5 justify-self-center flex w-full lg:w-3/4 justify-center">
           <Suspense>
-            <router-view class="justify-self-center w-full"/>
+            <router-view :key="$route.path" class="justify-self-center w-full"/>
           </Suspense>
         </article>
       </main>

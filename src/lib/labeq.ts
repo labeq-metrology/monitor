@@ -1,5 +1,5 @@
 export interface LabeqDevice {
-    id: string;
+    uuid: string;
     name: string;
     model: string;
     manufacturer: string;

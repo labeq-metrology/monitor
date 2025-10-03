@@ -17,7 +17,11 @@ const listenPluginErrors = () => {
         console.log(e)
         toast(`Plugin error (${e.payload.code})`, {
             description: e.payload.message,
-            duration: ERROR_TOAST_DURATION
+            duration: ERROR_TOAST_DURATION,
+            action: {
+                label: "Close",
+                onClick: () => {},
+            },
         })
     })
 }

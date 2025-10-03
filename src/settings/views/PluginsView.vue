@@ -23,7 +23,7 @@
       </article>
 
       <div class="col-span-3 flex flex-col min-h-0">
-        <article class="bg-sidebar rounded-sm p-1 border border-sidebar-border h-3/5 flex flex-col min-h-0">
+        <article class="bg-sidebar rounded-sm p-1 border border-sidebar-border flex flex-col min-h-0 h-full">
           <div v-if="!selectedPlugin" class="flex flex-col justify-center h-full">
             <p class="text-muted-foreground mx-auto">Select a plugin to view details.</p>
           </div>
@@ -31,19 +31,22 @@
           <ScrollAreaRoot v-else class="flex-1 flex flex-col min-h-0">
             <ScrollAreaViewport class="flex-1 min-h-0 m-1">
               <div class="h-full flex flex-col">
-                <h3 class="font-semibold">{{ selectedPlugin.name }}</h3>
+                <h3 class="font-semibold text-xl whitespace-nowrap overflow-hidden overflow-ellipsis">
+                  {{ selectedPlugin.name }}</h3>
                 <div class="text-xs text-muted-foreground mt-1">
                   <p>Version: {{ selectedPlugin.version }}</p>
                   <p>Author: {{ selectedPlugin.author }}</p>
                   <div>
                     <p>Supported drivers:</p>
                     <ul class="list-disc list-inside">
-                      <li v-for="driver in selectedPlugin.drivers" :key="driver">{{ driver }}</li>
+                      <li class="whitespace-nowrap overflow-hidden overflow-ellipsis"
+                          v-for="driver in selectedPlugin.drivers" :key="driver">{{ driver }}
+                      </li>
                     </ul>
                   </div>
                 </div>
-                <article class="text-sm mt-4 p-3 rounded-md border border-sidebar-border bg-muted">
-                  <h4 class="font-medium mb-2 text-foreground">Description</h4>
+                <article class="text-sm mt-2">
+                  <h4 class="font-medium text-foreground">Description</h4>
                   <p class="text-muted-foreground leading-relaxed whitespace-pre-line">
                     {{ selectedPlugin.description }}
                   </p>
@@ -59,10 +62,16 @@
           </ScrollAreaRoot>
         </article>
 
-        <Button :disabled="!selectedPlugin" class="mt-4 self-start">
-          <Icon icon="heroicons:arrow-top-right-on-square" width="24" height="24"/>
-          <p>More details</p>
-        </Button>
+        <div class="flex justify-end gap-2">
+          <Button variant="outline" class="mt-4 self-end" @click.prevent="invoke('init_plugins'); reloadList()">
+            <Icon icon="heroicons:arrow-path" width="24" height="24"/>
+            <p>Reload plugins</p>
+          </Button>
+          <Button :disabled="!selectedPlugin" class="mt-4 self-end">
+            <Icon icon="heroicons:arrow-top-right-on-square" width="24" height="24"/>
+            <p>More details</p>
+          </Button>
+        </div>
       </div>
 
     </section>
@@ -72,7 +81,7 @@
 <script async setup lang="ts">
 import {invoke} from "@tauri-apps/api/core";
 import {LabeqPluginManifest} from "@/lib/plugin.ts";
-import {onMounted, ref} from "vue";
+import {onMounted, ref, watch} from "vue";
 import {SidebarMenuSubButton} from "@/components/ui/sidebar";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -83,8 +92,16 @@ let plugins = ref<LabeqPluginManifest[]>([]);
 let selectedPlugin = ref<LabeqPluginManifest | null>(null);
 
 onMounted(async () => {
-  plugins.value = (await invoke<string[]>('list_plugins')).map(d => JSON.parse(d));
+  await reloadList()
 });
+
+watch(plugins, () => {
+  selectedPlugin.value = null;
+})
+
+const reloadList = async () => {
+  plugins.value = (await invoke<string[]>('list_plugins')).map(d => JSON.parse(d));
+}
 </script>
 
 <style lang="scss" scoped>
