@@ -7,6 +7,8 @@ pub struct LayoutSchema {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LayoutRow {
+    #[serde(rename = "groupName")]
+    group_name: Option<String>,
     columns: Vec<LayoutColumn>,
 }
 
@@ -33,5 +35,7 @@ pub enum LayoutPanelKind {
 pub struct LayoutPanel {
     kind: LayoutPanelKind,
     parameter: String,
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
     readonly: bool,
 }

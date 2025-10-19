@@ -14,11 +14,13 @@ export interface LayoutSchema {
 
 export interface LayoutRow {
     columns: LayoutColumn[];
+    groupName?: string;
 }
 
 export interface LayoutPanel {
     kind: "text" | "number" | "chart" | "image" | "custom";
     parameter: string;
+    displayName?: string;
     readonly: boolean;
 }
 
