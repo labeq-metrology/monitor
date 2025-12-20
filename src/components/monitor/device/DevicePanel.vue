@@ -11,10 +11,12 @@ import {computed, ComputedRef} from "vue";
 import type {LayoutPanel} from "@/lib/plugin.ts";
 import {DevicePanelProps} from "@/lib/device.ts";
 
+import TextPanel from "@/components/monitor/device/panels/TextPanel.vue";
 import NumberPanel from "@/components/monitor/device/panels/NumberPanel.vue";
+import NumberUnitPanel from "@/components/monitor/device/panels/NumberUnitPanel.vue";
 import ImagePanel from "@/components/monitor/device/panels/ImagePanel.vue";
 import ChartPanel from "@/components/monitor/device/panels/ChartPanel.vue";
-import TextPanel from "@/components/monitor/device/panels/TextPanel.vue";
+import VisualModelContainer from "@/components/monitor/device/panels/VisualModelContainer.vue";
 
 const props = defineProps<{
   definition: LayoutPanel,
@@ -24,9 +26,10 @@ const props = defineProps<{
 const panelMap = {
   text: TextPanel,
   number: NumberPanel,
+  "number-unit": NumberUnitPanel,
   chart: ChartPanel,
   image: ImagePanel,
-  custom: TextPanel,
+  custom: VisualModelContainer,
 } as const;
 
 const resolvedComponent = computed(() => {
@@ -34,6 +37,7 @@ const resolvedComponent = computed(() => {
 });
 
 const panelProps: ComputedRef<DevicePanelProps<any>> = computed(() => ({
+  parameter: props.definition.parameter,
   value: props.data.value,
   readonly: props.definition.readonly,
 }));

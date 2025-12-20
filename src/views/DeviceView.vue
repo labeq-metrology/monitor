@@ -14,7 +14,7 @@
     >
       <div v-for="(row, i) in layout?.rows ?? []" :key="i">
         <h3 v-if="row.groupName" class="text-lg my-1">{{ row.groupName }}</h3>
-        <div class="grid gap-2" :style="
+        <div class="grid gap-4 self-start" :style="
           {
             gridTemplateColumns: `repeat(${row.columns.length || 1}, minmax(0, 1fr))`
           }
@@ -48,21 +48,24 @@
 import {useRoute, useRouter} from "vue-router";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {invoke} from "@tauri-apps/api/core";
-import {computed, onMounted, reactive, ref} from "vue";
+import {computed, onMounted, provide, reactive, ref} from "vue";
 import {LabeqPluginManifest, LayoutSchema} from "@/lib/plugin.ts";
 import DevicePanel from "@/components/monitor/device/DevicePanel.vue";
 import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
-import {TooltipTrigger, TooltipContent, TooltipProvider} from "@/components/ui/tooltip";
+import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
+import {LabeqDevice} from "@/lib/labeq.ts";
 
 const connections = useConnectionStore();
 const route = useRoute();
 const router = useRouter();
 
-const device = connections.connections
+const device = ref<LabeqDevice>(connections.connections
     .get(route.params.connectionId as string)?.devices
-    .find(d => d.uuid === route.params.id)!!;
+    .find(d => d.uuid === route.params.id)!!);
+
+provide('device', device);
 
 const parameters = reactive<Map<string, string>>(new Map());
 
@@ -79,7 +82,7 @@ let layout = ref<LayoutSchema | null>(null);
 
 onMounted(async () => {
   plugin.value = (await invoke<string[]>('list_plugins')).map(d => JSON.parse(d)).find(plugin => plugin.drivers.includes(device.driver));
-  layout.value = await invoke<LayoutSchema>('load_layout', {driver: device.driver, variant: device.model});
+  layout.value = await invoke<LayoutSchema>('load_layout', {driver: device.value.driver, variant: device.value.model});
   console.log(layout.value);
 });
 </script>

@@ -20,15 +20,17 @@ pub struct LayoutColumn {
 #[derive(Debug, Deserialize, Serialize)]
 pub enum LayoutPanelKind {
     #[serde(rename = "text")]
-    TEXT,
+    Text,
     #[serde(rename = "number")]
-    NUMBER,
+    Number,
+    #[serde(rename = "number-unit")]
+    NumberUnit,
     #[serde(rename = "chart")]
-    CHART,
+    Chart,
     #[serde(rename = "image")]
-    IMAGE,
+    Image,
     #[serde(rename = "custom")]
-    CUSTOM,
+    Custom,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -10,6 +10,20 @@
     "opener:default",
     "fs:allow-read-text-file",
     "fs:allow-resource-read-recursive",
-    "fs:default"
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$APPDATA/**" },
+        { "path": "$RESOURCE/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$APPDATA/visual-models/**" },
+        { "path": "$RESOURCE/visual-models/**" }
+      ]
+    }
   ]
 }
