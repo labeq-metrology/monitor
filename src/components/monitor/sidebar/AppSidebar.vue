@@ -23,7 +23,7 @@ import {useRouter} from "vue-router";
 const connectionStore = useConnectionStore()
 const router = useRouter()
 
-listen("mqtt-publish", event => console.log(event))
+// listen("mqtt-publish", event => console.log(event.payload.event.message.payload))
 
 </script>
 

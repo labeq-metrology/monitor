@@ -16,19 +16,19 @@ export const useConnectionStore = defineStore('connections', () => {
     const refreshDeviceList = async (connection: LabeqConnection) => {
         const {data} = await useFetch(connection.apiUrl + '/devices').json<LabeqDevice[]>().get();
         connection.devices = data.value ?? [];
-    }
+    };
 
     listen<MqttConnectionEvent>('mqtt-connected', async (event) => {
         if (!connections.has(event.payload.id)) return;
         const connection = connections.get(event.payload.id)!!;
         connection.connected = true;
         await refreshDeviceList(connection);
-    })
+    });
 
     listen<MqttConnectionEvent>('mqtt-disconnected', async (event) => {
         if (!connections.has(event.payload.id)) return;
         connections.get(event.payload.id)!!.connected = false;
-    })
+    });
 
-    return {connections, refreshDeviceList}
+    return {connections, refreshDeviceList};
 });

@@ -48,14 +48,15 @@
 import {useRoute, useRouter} from "vue-router";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {invoke} from "@tauri-apps/api/core";
-import {computed, onMounted, provide, reactive, ref} from "vue";
+import {computed, onBeforeUnmount, onMounted, provide, reactive, ref} from "vue";
 import {LabeqPluginManifest, LayoutSchema} from "@/lib/plugin.ts";
 import DevicePanel from "@/components/monitor/device/DevicePanel.vue";
 import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
-import {LabeqDevice} from "@/lib/labeq.ts";
+import {LabeqDevice, ReadRequestResponse} from "@/lib/labeq.ts";
+import {listen} from "@tauri-apps/api/event";
 
 const connections = useConnectionStore();
 const route = useRoute();
@@ -64,10 +65,14 @@ const router = useRouter();
 const device = ref<LabeqDevice>(connections.connections
     .get(route.params.connectionId as string)?.devices
     .find(d => d.uuid === route.params.id)!!);
+let plugin = ref<LabeqPluginManifest | null>(null);
+let layout = ref<LayoutSchema | null>(null);
 
 provide('device', device);
+provide('plugin', plugin);
 
 const parameters = reactive<Map<string, string>>(new Map());
+const activeRequests = reactive<Map<string, string>>(new Map());
 
 const getParameterValue = (parameter: string) => computed(() => {
   return parameters.has(parameter) ? parameters.get(parameter) : "N/A";
@@ -77,13 +82,49 @@ if (!device) {
   router.push("/");
 }
 
-let plugin = ref<LabeqPluginManifest | null>(null);
-let layout = ref<LayoutSchema | null>(null);
+const publishListener = await listen("mqtt-publish", (e: any) => {
+  const paramRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
+  const match = paramRegex.exec(e.payload.event.message.topic);
+  if (!match || !match.groups) return;
+
+  if (match.groups.action !== 'resolve') return;
+
+  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as ReadRequestResponse;
+  parameters.set(parsedResponse.parameter, parsedResponse.error ? 'Error' : parsedResponse.resolvedValue!!);
+});
 
 onMounted(async () => {
-  plugin.value = (await invoke<string[]>('list_plugins')).map(d => JSON.parse(d)).find(plugin => plugin.drivers.includes(device.driver));
-  layout.value = await invoke<LayoutSchema>('load_layout', {driver: device.value.driver, variant: device.value.model});
-  console.log(layout.value);
+  plugin.value = (await invoke<string[]>('list_plugins'))
+      .map(d => JSON.parse(d)).find(plugin => plugin.drivers.includes(device.value.driver));
+
+  layout.value = await invoke<LayoutSchema>('load_layout', {
+    driver: device.value.driver,
+    variant: device.value.model
+  });
+
+  layout.value.rows
+      .forEach(row => row.columns
+          .forEach(column => column.panels
+              .forEach(panel => {
+                const uuid = crypto.randomUUID();
+                activeRequests.set(uuid, panel.parameter);
+                parameters.set(panel.parameter, 'Retrieving...');
+                invoke('gateway_publish', {
+                  connId: route.params.connectionId as string,
+                  topic: `device/${device.value.uuid}/parameters/${panel.parameter}/read`,
+                  payload: JSON.stringify({
+                    requestId: crypto.randomUUID(),
+                    returnType: 'string'
+                  }),
+                  retain: false
+                });
+              })
+          )
+      );
+});
+
+onBeforeUnmount(() => {
+  publishListener();
 });
 </script>
 

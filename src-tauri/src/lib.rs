@@ -20,6 +20,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             gateway_connect,
             gateway_disconnect,
+            gateway_publish,
             check_connection,
             init_plugins,
             list_plugins,

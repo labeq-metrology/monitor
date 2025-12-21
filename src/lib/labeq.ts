@@ -15,3 +15,10 @@ export interface LabeqConnection {
     connected: boolean;
     devices: LabeqDevice[];
 }
+
+export interface ReadRequestResponse {
+    request: string;
+    parameter: string;
+    resolvedValue?: string;
+    error?: string;
+}

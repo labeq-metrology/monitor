@@ -8,7 +8,7 @@ const props = defineProps<DevicePanelProps<number>>();
 
 <template>
   <div class="flex max-w-56">
-    <Input class="w-3/4 max-w-3/4 rounded-r-none border-r-transparent max-h-6 px-2 py-3"/>
+    <Input class="w-3/4 max-w-3/4 rounded-r-none border-r-transparent max-h-6 px-2 py-3" :value="props.value"/>
     <Select class="w-1/4 max-w-1/4 h-6 py-0">
       <SelectTrigger class="rounded-l-none max-h-6 px-2 py-3">
         <SelectValue placeholder="N/A" class="text-xs"/>
