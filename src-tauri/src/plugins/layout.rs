@@ -18,24 +18,8 @@ pub struct LayoutColumn {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum LayoutPanelKind {
-    #[serde(rename = "text")]
-    Text,
-    #[serde(rename = "number")]
-    Number,
-    #[serde(rename = "number-unit")]
-    NumberUnit,
-    #[serde(rename = "chart")]
-    Chart,
-    #[serde(rename = "image")]
-    Image,
-    #[serde(rename = "custom")]
-    Custom,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct LayoutPanel {
-    kind: LayoutPanelKind,
+    kind: String,
     parameter: String,
     #[serde(rename = "displayName")]
     display_name: Option<String>,

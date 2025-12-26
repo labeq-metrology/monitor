@@ -91,17 +91,17 @@ import {ScrollAreaRoot, ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport
 let plugins = ref<LabeqPluginManifest[]>([]);
 let selectedPlugin = ref<LabeqPluginManifest | null>(null);
 
-onMounted(async () => {
-  await reloadList()
+onMounted(() => {
+  reloadList();
 });
 
 watch(plugins, () => {
   selectedPlugin.value = null;
-})
+});
 
 const reloadList = async () => {
   plugins.value = (await invoke<string[]>('list_plugins')).map(d => JSON.parse(d));
-}
+};
 </script>
 
 <style lang="scss" scoped>

@@ -25,6 +25,9 @@ pub fn run() {
             init_plugins,
             list_plugins,
             load_layout,
+            get_panel_information,
+            format_param_to_panel,
+            format_panel_to_param,
             open_settings
         ])
         .run(tauri::generate_context!())

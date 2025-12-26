@@ -46,7 +46,6 @@
 
 <script setup lang="ts">
 import {useRoute, useRouter} from "vue-router";
-import {useConnectionStore} from "@/store/connection.store.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {computed, onBeforeUnmount, onMounted, provide, reactive, ref} from "vue";
 import {LabeqPluginManifest, LayoutSchema} from "@/lib/plugin.ts";
@@ -55,17 +54,16 @@ import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
-import {LabeqDevice, ReadRequestResponse} from "@/lib/labeq.ts";
+import {ReadRequestResponse} from "@/lib/labeq.ts";
 import {listen} from "@tauri-apps/api/event";
+import usePlugin from "@/composables/usePlugin.ts";
+import useDevice from "@/composables/useDevice.ts";
 
-const connections = useConnectionStore();
 const route = useRoute();
 const router = useRouter();
 
-const device = ref<LabeqDevice>(connections.connections
-    .get(route.params.connectionId as string)?.devices
-    .find(d => d.uuid === route.params.id)!!);
-let plugin = ref<LabeqPluginManifest | null>(null);
+const device = useDevice();
+let plugin = usePlugin(device.value!!);
 let layout = ref<LayoutSchema | null>(null);
 
 provide('device', device);
@@ -86,16 +84,15 @@ const publishListener = await listen("mqtt-publish", (e: any) => {
   const paramRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
   const match = paramRegex.exec(e.payload.event.message.topic);
   if (!match || !match.groups) return;
-
   if (match.groups.action !== 'resolve') return;
 
   const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as ReadRequestResponse;
+
   parameters.set(parsedResponse.parameter, parsedResponse.error ? 'Error' : parsedResponse.resolvedValue!!);
 });
 
 onMounted(async () => {
-  plugin.value = (await invoke<string[]>('list_plugins'))
-      .map(d => JSON.parse(d)).find(plugin => plugin.drivers.includes(device.value.driver));
+  if (!device.value) return;
 
   layout.value = await invoke<LayoutSchema>('load_layout', {
     driver: device.value.driver,
@@ -111,9 +108,9 @@ onMounted(async () => {
                 parameters.set(panel.parameter, 'Retrieving...');
                 invoke('gateway_publish', {
                   connId: route.params.connectionId as string,
-                  topic: `device/${device.value.uuid}/parameters/${panel.parameter}/read`,
+                  topic: `device/${device.value!!.uuid}/parameters/${panel.parameter}/read`,
                   payload: JSON.stringify({
-                    requestId: crypto.randomUUID(),
+                    requestId: uuid,
                     returnType: 'string'
                   }),
                   retain: false

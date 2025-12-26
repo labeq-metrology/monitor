@@ -18,7 +18,7 @@ export interface LayoutRow {
 }
 
 export interface LayoutPanel {
-    kind: "text" | "number" | "number-unit" | "chart" | "image" | "custom";
+    kind: string;
     parameter: string;
     displayName?: string;
     readonly: boolean;

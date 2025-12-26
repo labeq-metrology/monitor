@@ -1,11 +1,6 @@
 <template>
   <div>
     <h2 class="heading-2">Welcome to LabEq Monitor.</h2>
-    <VisualModelContainer
-        model-id="smith-chart-a"
-        :data="data"
-        config=""
-    />
     <button @click="invoke('open_settings')">s</button>
   </div>
 </template>

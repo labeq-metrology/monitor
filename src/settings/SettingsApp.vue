@@ -27,9 +27,7 @@
 
       <!-- flex + h-full to stretch -->
       <article class="p-5 flex w-full lg:w-3/5 justify-center h-full overflow-y-auto mx-auto">
-        <Suspense>
           <router-view class="h-full" />
-        </Suspense>
       </article>
     </SidebarProvider>
   </div>
