@@ -199,7 +199,7 @@ pub async fn format_param_to_panel(
     plugins_lock
         .get_mut(&plugin_id)
         .ok_or_else(|| format!("Plugin {} not found", plugin_id))?
-        .call::<String, String>("formatParameterToPanel", format!("{},{},{},{}", driver, variant, parameter, value))
+        .call::<String, String>("formatParameterToPanel", format!("{},{},{}~{}", driver, variant, parameter, value))
         .map_err(|e| e.to_string())
 }
 
@@ -222,6 +222,6 @@ pub async fn format_panel_to_param(
     plugins_lock
         .get_mut(&plugin_id)
         .ok_or_else(|| format!("Plugin {} not found", plugin_id))?
-        .call::<String, String>("formatPanelToParameter", format!("{},{},{},{}", driver, variant, parameter, value))
+        .call::<String, String>("formatPanelToParameter", format!("{},{},{}~{}", driver, variant, parameter, value))
         .map_err(|e| e.to_string())
 }

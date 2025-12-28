@@ -1,15 +1,15 @@
 <template>
   <component
       :is="resolvedComponent"
-      v-bind="panelProps"
-      class=""
+      v-bind="finalPanelProps"
+      v-model:value="formattedValue"
+      @update:value="handlePanelUpdate"
   />
 </template>
 
 <script setup lang="ts">
-import {computed, ComputedRef, Reactive, reactive, watchEffect} from "vue";
+import {computed, nextTick, ref, watch} from "vue";
 import type {LayoutPanel} from "@/lib/plugin.ts";
-import {DevicePanelProps} from "@/lib/device.ts";
 
 import TextPanel from "@/components/monitor/device/panels/TextPanel.vue";
 import NumberPanel from "@/components/monitor/device/panels/NumberPanel.vue";
@@ -23,8 +23,10 @@ import useDevice from "@/composables/useDevice.ts";
 
 const props = defineProps<{
   definition: LayoutPanel,
-  data: ComputedRef,
+  refreshing: boolean,
 }>();
+
+const data = defineModel<string>('data');
 
 const basicPanels = {
   text: TextPanel,
@@ -43,21 +45,53 @@ const resolvedComponent = computed(() => {
 
 const device = useDevice();
 
-const panelProps: Reactive<DevicePanelProps<any>> = reactive({
-  model: props.definition.kind,
-  parameter: props.definition.parameter,
-  value: props.data.value,
-  readonly: props.definition.readonly
-});
+const formattedValue = ref("");
+let isSettingFormattedValue = false; // Track when WE are updating formattedValue
 
-watchEffect(async () => {
-  if (device.value?.driver && device.value?.model) {
-    panelProps.value = await invoke<string>('format_param_to_panel', {
+watch(() => data.value, async (newRawValue) => {
+  if (device.value?.driver && device.value?.model && newRawValue) {
+    const result = await invoke<string>('format_param_to_panel', {
       driver: device.value.driver,
       variant: device.value.model,
       parameter: props.definition.parameter,
-      value: props.data.value
+      value: newRawValue
     });
+
+    if (formattedValue.value !== result) {
+      isSettingFormattedValue = true;
+      formattedValue.value = result;
+      await nextTick();
+      isSettingFormattedValue = false;
+    }
+  } else {
+    isSettingFormattedValue = true;
+    formattedValue.value = newRawValue ?? '';
+    await nextTick();
+    isSettingFormattedValue = false;
   }
-});
+}, { immediate: true });
+
+const handlePanelUpdate = async (newVal: string) => {
+  if (!newVal || !device.value || !device.value?.driver || !device.value?.model) return;
+  if (isSettingFormattedValue) return;
+  if (newVal === data.value) return;
+
+  console.log('newVal', newVal)
+  const result = await invoke<string>('format_panel_to_param', {
+    driver: device.value.driver,
+    variant: device.value.model,
+    parameter: props.definition.parameter,
+    value: newVal
+  });
+
+  data.value = result;
+  console.log('User edit synced to raw data:', result);
+};
+
+const finalPanelProps = computed(() => ({
+  model: props.definition.kind,
+  parameter: props.definition.parameter,
+  readonly: props.definition.readonly,
+  refreshing: props.refreshing
+}));
 </script>

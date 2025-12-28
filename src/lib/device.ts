@@ -1,5 +1,5 @@
-export interface DevicePanelProps<T> {
+export interface DevicePanelProps {
     parameter: string,
-    value: T,
-    readonly: boolean
+    readonly: boolean,
+    refreshing: boolean,
 }
