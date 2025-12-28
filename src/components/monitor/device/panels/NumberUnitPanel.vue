@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {DevicePanelProps} from "@/lib/device.ts";
 import {NumberField, NumberFieldContent, NumberFieldInput} from "@/components/ui/number-field";
-import {Select, SelectTrigger, SelectValue, SelectItem, SelectContent, SelectGroup} from "@/components/ui/select";
+import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import usePanelConfig from "@/composables/usePanelConfig.ts";
 import {z} from "zod";
 import {ref, watch, watchEffect} from "vue";
@@ -21,39 +21,64 @@ const value = ref<number>(0);
 const unit = ref<string>('N/A');
 
 watch(modelValue, (newVal) => {
+  console.log(newVal);
   if (!newVal) return;
   const parts = newVal.split(',');
   value.value = Number(parts[0]);
   unit.value = parts[1] || 'N/A';
-}, { immediate: true });
+}, {immediate: true});
 
 watchEffect(() => {
-  const combined = `${value.value},${unit.value}`;
+  console.log(value.value, unit.value);
+  const combined = `${value.value.toPrecision(6)},${unit.value}`;
 
   if (combined !== modelValue.value) {
-    console.log('aaa', combined)
     modelValue.value = combined;
   }
 });
 </script>
 
 <template>
-  <div class="flex max-w-48">
-    <NumberField type="number" v-model.number="value">
-      <NumberFieldContent>
-        <NumberFieldInput class="text-left rounded-r-none border-r-transparent max-h-6 px-2 py-3" />
-      </NumberFieldContent>
-    </NumberField>
-    <Select class="w-1/3 max-w-1/3 h-6 py-0" v-model="unit">
-      <SelectTrigger class="rounded-l-none max-h-6 px-2 py-3">
-        <SelectValue placeholder="N/A" class="text-xs"/>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectItem class="text-xs" v-for="(unit, i) in config?.units!!" :key="i" :value="unit">{{ unit }}</SelectItem>
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+  <div class="max-w-48">
+    <div class="w-full flex flex-nowrap items-center">
+      <NumberField
+          type="number"
+          v-model.number="value"
+          class="flex-1 min-w-0"
+          :format-options="{
+            minimumFractionDigits: 1,
+          }"
+          :step="0.000001"
+      >
+        <NumberFieldContent>
+          <NumberFieldInput
+              class="text-left rounded-r-none border-r-transparent max-h-6 px-2 py-3 w-full"
+          />
+        </NumberFieldContent>
+      </NumberField>
+      <Select v-model="unit">
+        <SelectTrigger
+            class="rounded-l-none max-h-6 px-2 py-3 w-auto min-w-[3.5rem] max-w-[5rem] flex-shrink-0"
+        >
+          <SelectValue
+              placeholder="N/A"
+              class="text-xs whitespace-nowrap overflow-hidden overflow-ellipsis"
+          />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem
+                class="text-xs"
+                v-for="(unit, i) in config?.units!!"
+                :key="i"
+                :value="unit"
+            >
+              {{ unit }}
+            </SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
   </div>
 </template>
 

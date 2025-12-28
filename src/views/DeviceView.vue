@@ -6,7 +6,7 @@
       <p class="text-xs text-muted-foreground">Loaded driver: {{ device?.driver }}</p>
       <ul class="mt-2 flex gap-2">
         <li>
-          <Button variant="default" class="h-6 text-xs">
+          <Button variant="default" class="h-6 text-xs" @click="writeAllParameters" :disabled="!layout">
             <Icon icon="heroicons:arrow-up-tray" width="24" height="24" />
             <span>Set all parameters</span>
           </Button>
@@ -76,7 +76,7 @@ import {Separator} from "@/components/ui/separator";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
 import {Icon} from "@iconify/vue";
-import {ReadRequestResponse} from "@/lib/labeq.ts";
+import {ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
 import {listen} from "@tauri-apps/api/event";
 import usePlugin from "@/composables/usePlugin.ts";
 import useDevice from "@/composables/useDevice.ts";
@@ -103,16 +103,28 @@ if (!device) {
 }
 
 const publishListener = await listen("mqtt-publish", (e: any) => {
-  if (!autoupdate.value) return;
-  const paramRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
-  const match = paramRegex.exec(e.payload.event.message.topic);
-  if (!match || !match.groups || match.groups.action !== 'resolve') return;
+  const requestRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
+  const updateRegex = /^device\/(?<device>.+)\/parameters\/(?<parameter>.+)\/(?<action>.+)/;
+  const requestMatch = requestRegex.exec(e.payload.event.message.topic);
+  const updateMatch = updateRegex.exec(e.payload.event.message.topic);
+  if (requestMatch?.groups) handleRequest(requestMatch, e);
+  else if (updateMatch?.groups) handleUpdate(updateMatch, e);
+});
+
+const handleRequest = (match: RegExpExecArray, e: any) => {
+  if (!match.groups || match.groups.action !== 'resolve') return;
   if (!activeRequests.has(match.groups?.request)) return;
 
   const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as ReadRequestResponse;
   activeRequests.delete(match.groups?.request);
   parameters[parsedResponse.parameter] = parsedResponse.error ? 'Error' : parsedResponse.resolvedValue!!;
-});
+};
+
+const handleUpdate = (match: RegExpExecArray, e: any) => {
+  if (!autoupdate.value || match.groups?.action !== 'update') return;
+  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as UpdateMessage;
+  parameters[match.groups.parameter] = parsedResponse.error ? 'Error' : parsedResponse.newValue!!;
+};
 
 onMounted(async () => {
   if (!device.value) return;
@@ -146,6 +158,32 @@ const refreshParameters = async () => {
           )
       );
 }
+
+const writeAllParameters = async () => {
+  if (!layout.value) return;
+  layout.value.rows
+      .forEach(row => row.columns
+          .forEach(column => column.panels
+              .forEach(panel => {
+                writeParameter(panel.parameter);
+              })
+          )
+      );
+};
+
+const writeParameter = async (parameter: string) => {
+  if (!layout.value) return;
+  invoke('gateway_publish', {
+    connId: route.params.connectionId as string,
+    topic: `device/${device.value!!.uuid}/parameters/${parameter}/write`,
+    payload: JSON.stringify({
+      requestId: crypto.randomUUID(),
+      contentType: 'labeq/string',
+      value: parameters[parameter]
+    }),
+    retain: false
+  });
+};
 
 onBeforeUnmount(() => {
   publishListener();

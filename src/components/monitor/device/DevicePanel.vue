@@ -65,7 +65,7 @@ watch(() => data.value, async (newRawValue) => {
     }
   } else {
     isSettingFormattedValue = true;
-    formattedValue.value = newRawValue ?? '';
+    formattedValue.value = data.value ?? 'hh';
     await nextTick();
     isSettingFormattedValue = false;
   }

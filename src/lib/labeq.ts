@@ -22,3 +22,8 @@ export interface ReadRequestResponse {
     resolvedValue?: string;
     error?: string;
 }
+
+export interface UpdateMessage {
+    newValue: string;
+    error?: string;
+}
