@@ -178,7 +178,6 @@ pub async fn gateway_disconnect(app_handle: AppHandle, conn_id: String) -> Resul
     }
 }
 
-// TODO: Publish
 #[tauri::command]
 pub async fn gateway_publish(
     conn_id: String,

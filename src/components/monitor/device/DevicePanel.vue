@@ -3,6 +3,7 @@
       :is="resolvedComponent"
       v-bind="finalPanelProps"
       v-model:value="formattedValue"
+      v-model:error="error"
       @update:value="handlePanelUpdate"
   />
 </template>
@@ -27,6 +28,7 @@ const props = defineProps<{
 }>();
 
 const data = defineModel<string>('data');
+const error = defineModel<string>('error');
 
 const basicPanels = {
   text: TextPanel,

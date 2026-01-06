@@ -6,21 +6,25 @@
       <p class="text-xs text-muted-foreground">Loaded driver: {{ device?.driver }}</p>
       <ul class="mt-2 flex gap-2">
         <li>
-          <Button variant="default" class="h-6 text-xs" @click="writeAllParameters" :disabled="!layout">
-            <Icon icon="heroicons:arrow-up-tray" width="24" height="24" />
+          <Button variant="default" class="h-6 text-xs disabled:[&_svg]:animate-bounce" @click="writeAllParameters"
+                  :disabled="!layout || activeWriteRequests.size > 0">
+            <Icon icon="heroicons:arrow-up-tray" width="24" height="24" v-if="activeWriteRequests.size === 0"/>
+            <Icon icon="heroicons:arrow-up" width="24" height="24" v-else/>
             <span>Set all parameters</span>
           </Button>
         </li>
         <li>
-          <Button variant="secondary" class="h-6 text-xs disabled:[&_svg]:animate-spin" @click="refreshParameters" :disabled="!layout || activeRequests.size > 0">
-            <Icon icon="heroicons:arrow-path" width="24" height="24" />
+          <Button variant="secondary" class="h-6 text-xs disabled:[&_svg]:animate-spin" @click="refreshParameters"
+                  :disabled="!layout || activeReadRequests.size > 0">
+            <Icon icon="heroicons:arrow-path" width="24" height="24"/>
             <span>Refresh parameters</span>
           </Button>
         </li>
         <li>
-          <Button :variant="autoupdate ? 'secondary' : 'destructive'" class="h-6 text-xs" @click.prevent="autoupdate = !autoupdate">
-            <Icon v-if="autoupdate" icon="heroicons:bolt" width="24" height="24" />
-            <Icon v-else icon="heroicons:bolt-slash" width="24" height="24" />
+          <Button :variant="autoupdate ? 'secondary' : 'destructive'" class="h-6 text-xs"
+                  @click.prevent="autoupdate = !autoupdate">
+            <Icon v-if="autoupdate" icon="heroicons:bolt" width="24" height="24"/>
+            <Icon v-else icon="heroicons:bolt-slash" width="24" height="24"/>
             <p>Auto-update: {{ autoupdate ? 'on' : 'off' }}</p>
           </Button>
         </li>
@@ -42,20 +46,42 @@
         ">
           <div v-for="(column, j) in row.columns" :key="j" class="flex flex-col">
             <div v-for="(panel, i) in column.panels" :key="i" class="min-w-0">
-              <TooltipProvider>
+              <div class="flex items-center gap-2 mt-2 h-4"> <TooltipProvider>
                 <TooltipRoot :delayDuration="2000">
                   <TooltipTrigger as-child>
-                    <Label :for="`${device?.uuid},${panel.parameter}`" class="pb-1 mt-2 whitespace-nowrap overflow-hidden text-ellipsis block w-fit max-w-full">{{
-                        panel.displayName || panel.parameter
-                      }}</Label>
+                    <Label
+                        :for="`${device?.uuid},${panel.parameter}`"
+                        class="whitespace-nowrap overflow-hidden text-ellipsis block max-w-full leading-none"
+                    >
+                      {{ panel.displayName || panel.parameter }}
+                    </Label>
                   </TooltipTrigger>
                   <TooltipContent>
                     {{ panel.displayName || panel.parameter }}
                   </TooltipContent>
                 </TooltipRoot>
               </TooltipProvider>
-              <div class="mt-1">
-                <DevicePanel :id="`${device?.uuid},${panel.parameter}`" :definition="panel" v-model:data="parameters[panel.parameter]" :refreshing="refreshing"/>
+
+                <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                  <Tooltip v-if="!!errors[panel.parameter]">
+                    <TooltipTrigger class="flex items-center">
+                      <Icon
+                          icon="heroicons:exclamation-triangle-16-solid"
+                          class="text-destructive"
+                          width="16"
+                          height="16"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p class="text-destructive">{{ errors[panel.parameter] }}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+              <div class="mt-2">
+                <DevicePanel :id="`${device?.uuid},${panel.parameter}`" :definition="panel"
+                             v-model:data="parameters[panel.parameter]" v-model:error="errors[panel.parameter]"
+                             :refreshing="refreshing"/>
               </div>
             </div>
           </div>
@@ -73,7 +99,7 @@ import {LayoutSchema} from "@/lib/plugin.ts";
 import DevicePanel from "@/components/monitor/device/DevicePanel.vue";
 import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
-import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
 import {Icon} from "@iconify/vue";
 import {ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
@@ -93,10 +119,13 @@ provide('device', device);
 provide('plugin', plugin);
 
 const autoupdate = ref(true);
-const refreshing = computed(() => activeRequests.size > 0);
+const refreshing = computed(() => activeReadRequests.size > 0);
 
 const parameters = reactive<Record<string, string>>({});
-const activeRequests = reactive<Map<string, string>>(new Map());
+const errors = reactive<Record<string, string>>({});
+
+const activeReadRequests = reactive<Map<string, string>>(new Map());
+const activeWriteRequests = reactive<Map<string, string>>(new Map());
 
 if (!device) {
   router.push("/");
@@ -113,17 +142,28 @@ const publishListener = await listen("mqtt-publish", (e: any) => {
 
 const handleRequest = (match: RegExpExecArray, e: any) => {
   if (!match.groups || match.groups.action !== 'resolve') return;
-  if (!activeRequests.has(match.groups?.request)) return;
+  if (!activeReadRequests.has(match.groups?.request) && !activeWriteRequests.has(match.groups?.request)) return;
 
   const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as ReadRequestResponse;
-  activeRequests.delete(match.groups?.request);
-  parameters[parsedResponse.parameter] = parsedResponse.error ? 'Error' : parsedResponse.resolvedValue!!;
+  activeReadRequests.delete(match.groups?.request);
+  activeWriteRequests.delete(match.groups?.request);
+  if (parsedResponse.error) {
+    errors[parsedResponse.parameter] = parsedResponse.error;
+    return;
+  }
+  parameters[parsedResponse.parameter] = parsedResponse.resolvedValue!!;
+  delete errors[parsedResponse.parameter];
 };
 
 const handleUpdate = (match: RegExpExecArray, e: any) => {
   if (!autoupdate.value || match.groups?.action !== 'update') return;
   const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as UpdateMessage;
-  parameters[match.groups.parameter] = parsedResponse.error ? 'Error' : parsedResponse.newValue!!;
+  if (parsedResponse.error) {
+    errors[match.groups.parameter] = parsedResponse.error;
+    return;
+  }
+  parameters[match.groups.parameter] = parsedResponse.newValue!!;
+  delete errors[match.groups.parameter];
 };
 
 onMounted(async () => {
@@ -144,7 +184,7 @@ const refreshParameters = async () => {
           .forEach(column => column.panels
               .forEach(panel => {
                 const uuid = crypto.randomUUID();
-                activeRequests.set(uuid, panel.parameter);
+                activeReadRequests.set(uuid, panel.parameter);
                 invoke('gateway_publish', {
                   connId: route.params.connectionId as string,
                   topic: `device/${device.value!!.uuid}/parameters/${panel.parameter}/read`,
@@ -173,16 +213,18 @@ const writeAllParameters = async () => {
 
 const writeParameter = async (parameter: string) => {
   if (!layout.value) return;
+  const uuid = crypto.randomUUID();
   invoke('gateway_publish', {
     connId: route.params.connectionId as string,
     topic: `device/${device.value!!.uuid}/parameters/${parameter}/write`,
     payload: JSON.stringify({
-      requestId: crypto.randomUUID(),
+      requestId: uuid,
       contentType: 'labeq/string',
       value: parameters[parameter]
     }),
     retain: false
   });
+  activeWriteRequests.set(uuid, parameter);
 };
 
 onBeforeUnmount(() => {
