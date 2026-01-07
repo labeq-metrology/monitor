@@ -1,11 +1,12 @@
 use crate::mqtt::*;
 use crate::plugins::*;
-use crate::settings::open_settings;
+use crate::popup::open_popup_webview;
 
 mod mqtt;
 mod plugins;
 mod errors;
-mod settings;
+mod popup;
+mod state;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 struct MonitorData {
@@ -28,7 +29,7 @@ pub fn run() {
             get_panel_information,
             format_param_to_panel,
             format_panel_to_param,
-            open_settings
+            open_popup_webview
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -57,6 +57,7 @@ const onSubmit = form.handleSubmit(values => {
   })
   invoke('gateway_connect', {
     url: values.mqttUrl,
+    apiUrl: values.apiUrl,
     username: values.username,
     password: values.password,
     connId: values.name,

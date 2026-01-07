@@ -11,7 +11,7 @@ const app = createApp(SettingsApp);
 const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-        {name: "settings-home", path: "/settings.html", component: WelcomeView},
+        {name: "popup-home", path: "/popup.html", component: WelcomeView},
         {name: "plugins", path: "/plugins", component: () => import("@/settings/views/PluginsView.vue")}
     ]
 })

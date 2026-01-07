@@ -7,9 +7,14 @@ import {useFetch} from "@vueuse/core";
 export interface MqttConnectionEvent {
     id: string;
     url: string;
-    event: number;
+    event: {
+        api_url: string;
+        username: string;
+        password: string;
+    };
 }
 
+// TODO: Move all state to Tauri in order to keep track between views
 export const useConnectionStore = defineStore('connections', () => {
     const connections = reactive<Map<string, LabeqConnection>>(new Map());
 
@@ -19,7 +24,17 @@ export const useConnectionStore = defineStore('connections', () => {
     };
 
     listen<MqttConnectionEvent>('mqtt-connected', async (event) => {
-        if (!connections.has(event.payload.id)) return;
+        if (!connections.has(event.payload.id)) {
+            connections.set(event.payload.id, {
+                id: event.payload.id,
+                mqttUrl: event.payload.url,
+                apiUrl: event.payload.event.api_url,
+                username: event.payload.event.username,
+                password: event.payload.event.password,
+                connected: false,
+                devices: []
+            });
+        };
         const connection = connections.get(event.payload.id)!!;
         connection.connected = true;
         await refreshDeviceList(connection);

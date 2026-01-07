@@ -1,41 +1,29 @@
 <script setup lang="ts">
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarTrigger,
-} from '@/components/ui/menubar'
+import {Menubar,} from '@/components/ui/menubar'
 import {SidebarTrigger} from "@/components/ui/sidebar";
 import {useColorMode} from "@vueuse/core";
 import {Button} from "@/components/ui/button";
 import {Icon} from "@iconify/vue";
+import {invoke} from "@tauri-apps/api/core";
 
 const mode = useColorMode()
 </script>
 
 <template>
   <Menubar>
-    <SidebarTrigger />
+    <SidebarTrigger/>
     <Button variant="ghost" @click="mode == 'light' ? mode = 'dark' : mode = 'light'">
-      <Icon v-if="mode == 'dark'" icon="heroicons-outline:sun" />
-      <Icon v-else icon="heroicons-outline:moon" />
+      <Icon v-if="mode == 'dark'" icon="heroicons-outline:sun"/>
+      <Icon v-else icon="heroicons-outline:moon"/>
     </Button>
-    <MenubarMenu>
-      <MenubarTrigger>File</MenubarTrigger>
-      <MenubarContent>
-        <MenubarItem>
-          New Tab <MenubarShortcut>⌘T</MenubarShortcut>
-        </MenubarItem>
-        <MenubarItem>New Window</MenubarItem>
-        <MenubarSeparator />
-        <MenubarItem>Share</MenubarItem>
-        <MenubarSeparator />
-        <MenubarItem>Print</MenubarItem>
-      </MenubarContent>
-    </MenubarMenu>
+    <Button variant="ghost"
+            @click="invoke('open_popup_webview', { title: 'Settings', label: 'settings', source: 'settings.html' })">
+      <Icon icon="heroicons:cog-6-tooth" width="24" height="24"/>
+    </Button>
+    <Button variant="ghost"
+            @click="invoke('open_popup_webview', { title: 'Settings', label: 'settings1', source: 'new-connection' })">
+      <Icon icon="heroicons:cog-6-tooth" width="24" height="24"/>
+    </Button>
   </Menubar>
 </template>
 

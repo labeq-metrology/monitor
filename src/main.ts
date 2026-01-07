@@ -1,7 +1,7 @@
 import {createApp} from "vue";
 import App from "./App.vue";
 import "@/index.css";
-import {createMemoryHistory, createRouter, RouteRecordRaw} from "vue-router";
+import {createRouter, createWebHistory, RouteRecordRaw} from "vue-router";
 import NewConnectionView from "@/views/NewConnectionView.vue";
 import WelcomeView from "@/views/WelcomeView.vue";
 import {createPinia} from "pinia";
@@ -37,7 +37,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 const router = createRouter({
-    history: createMemoryHistory(),
+    history: createWebHistory(),
     routes,
 });
 
@@ -47,7 +47,6 @@ const pinia = createPinia();
 registerEventListeners();
 
 app.use(router).use(pinia);
-
 
 app.mount('#app');
 
