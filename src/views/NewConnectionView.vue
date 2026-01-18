@@ -171,7 +171,7 @@ const testConnection = () => {
           <Icon icon="heroicons-outline:check" class="w-4"/>
           Connection successful
         </p>
-        <p v-else-if="connectionCheck == ConnectionCheck.ERROR" class="flex items-center gap-2 text-destructive">
+        <p v-else-if="connectionCheck == ConnectionCheck.ERROR" class="flex items-center gap-2 text-destructive-foreground">
           <Icon icon="heroicons-outline:x"/>
           Connection failed
         </p>

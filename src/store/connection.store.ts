@@ -1,8 +1,8 @@
 import {defineStore} from "pinia";
 import {reactive} from "vue";
+import {AppState, LabeqConnection} from "@/lib/labeq.ts";
+import {invoke} from "@tauri-apps/api/core";
 import {listen} from "@tauri-apps/api/event";
-import {LabeqConnection, LabeqDevice} from "@/lib/labeq.ts";
-import {useFetch} from "@vueuse/core";
 
 export interface MqttConnectionEvent {
     id: string;
@@ -18,32 +18,18 @@ export interface MqttConnectionEvent {
 export const useConnectionStore = defineStore('connections', () => {
     const connections = reactive<Map<string, LabeqConnection>>(new Map());
 
+    invoke<AppState>('get_state').then(state => {
+        state.connections.forEach(connection => connections.set(connection.id, connection));
+    });
+
+    listen<AppState>('app-state-update', (e) => {
+        e.payload.connections.forEach(connection => connections.set(connection.id, connection));
+        console.log(connections.values())
+    }).then(_ => {});
+
     const refreshDeviceList = async (connection: LabeqConnection) => {
-        const {data} = await useFetch(connection.apiUrl + '/devices').json<LabeqDevice[]>().get();
-        connection.devices = data.value ?? [];
+        await invoke('update_devices', {connId: connection.id});
     };
-
-    listen<MqttConnectionEvent>('mqtt-connected', async (event) => {
-        if (!connections.has(event.payload.id)) {
-            connections.set(event.payload.id, {
-                id: event.payload.id,
-                mqttUrl: event.payload.url,
-                apiUrl: event.payload.event.api_url,
-                username: event.payload.event.username,
-                password: event.payload.event.password,
-                connected: false,
-                devices: []
-            });
-        };
-        const connection = connections.get(event.payload.id)!!;
-        connection.connected = true;
-        await refreshDeviceList(connection);
-    });
-
-    listen<MqttConnectionEvent>('mqtt-disconnected', async (event) => {
-        if (!connections.has(event.payload.id)) return;
-        connections.get(event.payload.id)!!.connected = false;
-    });
 
     return {connections, refreshDeviceList};
 });

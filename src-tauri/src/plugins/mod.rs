@@ -20,6 +20,7 @@ lazy_static! {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LabeqPluginManifest {
     pub name: String,
     pub version: String,
@@ -29,7 +30,6 @@ pub struct LabeqPluginManifest {
     pub description: Option<String>,
 }
 
-/// Helper function to get plugin by driver name
 async fn get_plugin_by_driver(driver: &str) -> Result<String, String> {
     let drivers_lock = SUPPORTED_DRIVERS.read().await;
     drivers_lock
@@ -38,7 +38,6 @@ async fn get_plugin_by_driver(driver: &str) -> Result<String, String> {
         .ok_or_else(|| format!("Driver {} not supported", driver))
 }
 
-/// Helper function to emit plugin error
 fn emit_plugin_error(app: &AppHandle, message: String, code: &str) {
     let _ = app.emit(
         "plugin-error",
@@ -46,7 +45,6 @@ fn emit_plugin_error(app: &AppHandle, message: String, code: &str) {
     );
 }
 
-/// Helper function to get plugin by driver name and acquire write lock
 async fn get_plugin_mut(driver: &str) -> Result<(String, tokio::sync::RwLockWriteGuard<'static, HashMap<String, Plugin>>), String> {
     let plugin_id = get_plugin_by_driver(driver).await?;
     let plugins_lock = LOADED_PLUGINS.write().await;

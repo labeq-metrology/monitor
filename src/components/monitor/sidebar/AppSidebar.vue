@@ -15,15 +15,12 @@ import {Collapsible, CollapsibleContent} from "@/components/ui/collapsible";
 import {Icon} from "@iconify/vue";
 import {Button} from "@/components/ui/button";
 import {useConnectionStore} from "@/store/connection.store.ts";
-import {listen} from "@tauri-apps/api/event";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import ConnectionButton from "@/components/monitor/sidebar/ConnectionButton.vue";
 import {useRouter} from "vue-router";
 
-const connectionStore = useConnectionStore()
-const router = useRouter()
-
-// listen("mqtt-publish", event => console.log(event.payload.event.message.payload))
+const connectionStore = useConnectionStore();
+const router = useRouter();
 
 </script>
 
@@ -40,7 +37,7 @@ const router = useRouter()
           <SidebarGroupLabel>Connections</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuButton asChild class="bg-background justify-center text-muted-foreground">
-              <RouterLink to="new-connection">
+              <RouterLink to="/new-connection">
                 <Button variant="ghost">
                   <Icon icon="heroicons:plus"/>
                   <span>New connection</span>

@@ -4,8 +4,8 @@
       <ContextMenuTrigger asChild class="text-sm text-accent-background">
         <div class="flex items-center space-x-2 w-full">
           <Icon
-              :icon="connection.connected ? 'heroicons:signal-20-solid' : 'heroicons:signal-slash-20-solid'"
-              :class="connection.connected ? 'text-green-600 text-xl' : 'text-red-600 text-xl'"
+              :icon="connection.state == 'Connected' ? 'heroicons:signal-20-solid' : 'heroicons:signal-slash-20-solid'"
+              :class="connection.state == 'Connected' ? 'text-green-600 text-xl' : 'text-red-600 text-xl'"
           />
           <TooltipProvider>
             <Tooltip>

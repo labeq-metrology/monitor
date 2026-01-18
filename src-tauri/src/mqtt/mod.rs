@@ -1,38 +1,24 @@
+use crate::state::connection::{ConnectionState, LabeqDevice};
+use crate::state::{connection::ConnectionData, connection::ConnectionState::*, update_state, AppState};
 use lazy_static::lazy_static;
 use rumqttc::{AsyncClient, ClientError, Event, MqttOptions, Packet, Publish, QoS};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Url};
+use tauri::{AppHandle, Emitter, Manager, State, Url};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
-struct LabeqConnection {
+struct ConnectionHandle {
     client: AsyncClient,
     task: JoinHandle<()>,
-    metadata: ConnectionMetadata,
+    connection: ConnectionData,
     connected: RwLock<bool>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
-pub struct ConnectionMetadata {
-    pub id: String,
-    pub mqtt_url: String,
-    pub api_url: String,
-    pub username: String,
-    pub password: String,
-}
-
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ConnectionInfo {
-    pub id: String,
-    pub mqtt_url: String,
-    pub api_url: String,
-    pub username: String,
-    pub connected: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct EventPayload {
     pub id: String,
     pub event: PayloadEvent,
@@ -47,6 +33,7 @@ pub enum PayloadEvent {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MqttPublish {
     pub dup: bool,
     pub qos: u8,
@@ -74,7 +61,8 @@ impl From<Publish> for MqttPublish {
 }
 
 lazy_static! {
-    static ref MQTT_CLIENTS: RwLock<HashMap<String, LabeqConnection>> = RwLock::new(HashMap::new());
+    static ref MQTT_CLIENTS: RwLock<HashMap<String, ConnectionHandle>> =
+        RwLock::new(HashMap::new());
 }
 
 #[tauri::command]
@@ -110,31 +98,38 @@ pub async fn gateway_connect(
     let (client, event_loop) = AsyncClient::new(options, 10);
 
     client
-        .subscribe("#", QoS::AtLeastOnce)
+        .subscribe("device/#", QoS::AtLeastOnce)
         .await
         .map_err(|e| format!("Subscription failed: {}", e))?;
 
-    // Spawn event loop handler
     let task = spawn_event_loop(app.clone(), conn_id.clone(), event_loop);
 
-    // Store connection
-    let metadata = ConnectionMetadata {
+    let data = ConnectionData {
         id: conn_id.clone(),
         mqtt_url: url,
         api_url,
         username,
         password,
+        state: ConnectionState::Connecting,
+        devices: Vec::new(),
     };
 
     MQTT_CLIENTS.write().await.insert(
-        conn_id,
-        LabeqConnection {
+        conn_id.clone(),
+        ConnectionHandle {
             client,
             task,
-            metadata,
-            connected: RwLock::new(false), // Will be set to true on ConnAck
+            connection: data,
+            connected: RwLock::new(false),
         },
     );
+
+    let connections = list_connections().await;
+    update_state(&app, |state: &mut AppState| {
+        state.connections = connections;
+    });
+
+    _ = update_devices(app, &conn_id).await;
 
     Ok(())
 }
@@ -175,65 +170,102 @@ pub async fn gateway_publish(
             ClientError::Request(_) | ClientError::TryRequest(_) => {
                 "Failed to publish message".to_string()
             }
-            _ => format!("Publish error: {}", e),
         })
 }
 
 #[tauri::command]
 pub async fn check_connection(conn_id: String) -> bool {
-    if let Some(conn) = MQTT_CLIENTS.read().await.get(&conn_id) {
-        *conn.connected.read().await
+    if let Some(handle) = MQTT_CLIENTS.read().await.get(&conn_id) {
+        *handle.connected.read().await
     } else {
         false
     }
 }
 
 #[tauri::command]
-pub async fn get_connection_info(conn_id: String) -> Result<ConnectionInfo, String> {
+pub async fn get_connection_info(conn_id: String) -> Result<ConnectionData, String> {
     let clients = MQTT_CLIENTS.read().await;
-    let connection = clients
+    let handle = clients
         .get(&conn_id)
         .ok_or_else(|| "Connection not found".to_string())?;
 
-    let info = ConnectionInfo {
-        id: connection.metadata.id.clone(),
-        mqtt_url: connection.metadata.mqtt_url.clone(),
-        api_url: connection.metadata.api_url.clone(),
-        username: connection.metadata.username.clone(),
-        connected: *connection.connected.read().await,
-    };
-
-    Ok(info)
+    Ok(handle.connection.clone())
 }
 
-#[tauri::command]
-pub async fn list_connections() -> Vec<ConnectionInfo> {
+pub async fn list_connections() -> Vec<ConnectionData> {
     let clients = MQTT_CLIENTS.read().await;
     let mut connections = Vec::new();
 
-    for (_, conn) in clients.iter() {
-        connections.push(ConnectionInfo {
-            id: conn.metadata.id.clone(),
-            mqtt_url: conn.metadata.mqtt_url.clone(),
-            api_url: conn.metadata.api_url.clone(),
-            username: conn.metadata.username.clone(),
-            connected: *conn.connected.read().await,
-        });
+    for (_, handle) in clients.iter() {
+        connections.push(handle.connection.clone());
     }
 
     connections
 }
 
 async fn disconnect_internal(conn_id: &str) {
-    if let Some(connection) = MQTT_CLIENTS.write().await.remove(conn_id) {
-        connection.task.abort();
+    if let Some(handle) = MQTT_CLIENTS.write().await.remove(conn_id) {
+        handle.task.abort();
     }
 }
 
-async fn update_connection_state(conn_id: &str, connected: bool) {
-    if let Some(conn) = MQTT_CLIENTS.read().await.get(conn_id) {
-        *conn.connected.write().await = connected;
-    }
+async fn update_connection_state(app: &AppHandle, conn_id: &str, connected: bool, error: bool) {
+    let connections = {
+        let mut clients = MQTT_CLIENTS.write().await;
+
+        if let Some(handle) = clients.get_mut(conn_id) {
+            *handle.connected.write().await = connected;
+            handle.connection.state = if connected {
+                ConnectionState::Connected
+            } else if error {
+                ConnectionState::ConnectionError
+            } else {
+                ConnectionState::Disconnected
+            };
+        }
+
+        clients.values().map(|c| c.connection.clone()).collect()
+    };
+
+    update_state(app, |state| {
+        state.connections = connections;
+    });
+}
+
+#[tauri::command]
+pub async fn update_devices(app: AppHandle, conn_id: &str) -> Result<Vec<LabeqDevice>, ()> {
+    let api_url = MQTT_CLIENTS
+        .read()
+        .await
+        .get(conn_id)
+        .ok_or(())?
+        .connection
+        .api_url
+        .clone();
+
+    let devices = reqwest::get(format!("{}/devices", api_url))
+        .await
+        .map_err(|_| ())?
+        .json::<Vec<LabeqDevice>>()
+        .await
+        .map_err(|_| ())?;
+
+    let connections = {
+        let mut clients = MQTT_CLIENTS.write().await;
+        clients
+            .get_mut(conn_id)
+            .ok_or(())?
+            .connection
+            .devices = devices.clone();
+
+        clients.values().map(|c| c.connection.clone()).collect()
+    };
+
+    update_state(&app, |state| {
+        state.connections = connections;
+    });
+
+    Ok(devices)
 }
 
 fn spawn_event_loop(
@@ -245,22 +277,21 @@ fn spawn_event_loop(
         loop {
             match event_loop.poll().await {
                 Ok(Event::Incoming(Packet::ConnAck(_))) => {
-                    update_connection_state(&conn_id, true).await;
+                    update_connection_state(&app, &conn_id, true, false).await;
                     emit_event(&app, &conn_id, PayloadEvent::Connect);
                 }
                 Ok(Event::Incoming(Packet::Publish(p))) => {
                     emit_event(&app, &conn_id, PayloadEvent::Message(MqttPublish::from(p)));
                 }
                 Err(e) => {
-                    eprintln!("MQTT connection error [{}]: {}", conn_id, e);
-                    update_connection_state(&conn_id, false).await;
+                    eprintln!("MQTT connection error [{conn_id}]: [{e}]");
+                    update_connection_state(&app, &conn_id, false, true).await;
                     emit_event(&app, &conn_id, PayloadEvent::Disconnect);
 
-                    // Clean up on error
                     disconnect_internal(&conn_id).await;
                     break;
                 }
-                _ => {} // Ignore other events
+                _ => {}
             }
         }
     })

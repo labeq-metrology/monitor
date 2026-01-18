@@ -31,7 +31,7 @@ watch(modelValue, (newVal) => {
 }, {immediate: true});
 
 watchEffect(() => {
-  const combined = `${value.value.toPrecision(6)},${unit.value}`;
+  const combined = `${value.value.toPrecision(6) ?? 0},${unit.value}`;
 
   if (combined !== modelValue.value) {
     modelValue.value = combined;
@@ -40,55 +40,48 @@ watchEffect(() => {
 </script>
 
 <template>
-  <Tooltip>
-    <TooltipTrigger>
-      <Field class="max-w-48" :data-invalid="!!error">
-        <div class="w-full flex flex-nowrap items-center">
-          <NumberField
-              type="number"
-              v-model.number="value"
-              class="flex-1"
-              :format-options="{
-                minimumFractionDigits: 1,
-              }"
-              :step="0.000001"
-          >
-            <NumberFieldContent>
-              <NumberFieldInput
-                  data-invalid
-                  class="text-left text-xs rounded-r-none border-r-transparent max-h-6 px-2 py-3 w-full invalid:border-destructive"
-              />
-            </NumberFieldContent>
-          </NumberField>
-          <Select v-model="unit">
-            <SelectTrigger
-                class="rounded-l-none max-h-6 px-2 py-3 w-auto min-w-[3.5rem] max-w-[5rem] lg:max-w-[6rem] flex-shrink-0"
+  <Field class="max-w-48" :data-invalid="!!error">
+    <div class="w-full flex flex-nowrap items-center">
+      <NumberField
+          type="number"
+          v-model.number="value"
+          class="flex-1"
+          :format-options="{
+            minimumFractionDigits: 1,
+          }"
+          :step="0.000001"
+      >
+        <NumberFieldContent>
+          <NumberFieldInput
+              data-invalid
+              class="text-left text-xs rounded-r-none border-r-transparent max-h-6 px-2 py-3 w-full"
+          />
+        </NumberFieldContent>
+      </NumberField>
+      <Select v-model="unit">
+        <SelectTrigger
+            class="rounded-l-none max-h-6 px-2 py-3 w-auto min-w-[3.5rem] max-w-[5rem] lg:max-w-[6rem] flex-shrink-0"
+        >
+          <SelectValue
+              placeholder="N/A"
+              class="text-xs whitespace-nowrap overflow-hidden overflow-ellipsis"
+          />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem
+                class="text-xs"
+                v-for="(unit, i) in config?.units!!"
+                :key="i"
+                :value="unit"
             >
-              <SelectValue
-                  placeholder="N/A"
-                  class="text-xs whitespace-nowrap overflow-hidden overflow-ellipsis"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem
-                    class="text-xs"
-                    v-for="(unit, i) in config?.units!!"
-                    :key="i"
-                    :value="unit"
-                >
-                  {{ unit }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      </Field>
-    </TooltipTrigger>
-    <TooltipContent v-if="!!error" side="bottom">
-      <FieldError :errors="[error]" />
-    </TooltipContent>
-  </Tooltip>
+              {{ unit }}
+            </SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  </Field>
 </template>
 
 <style scoped lang="scss">

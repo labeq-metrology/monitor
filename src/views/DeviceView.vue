@@ -46,21 +46,13 @@
         ">
           <div v-for="(column, j) in row.columns" :key="j" class="flex flex-col">
             <div v-for="(panel, i) in column.panels" :key="i" class="min-w-0">
-              <div class="flex items-center gap-2 mt-2 h-4"> <TooltipProvider>
-                <TooltipRoot :delayDuration="2000">
-                  <TooltipTrigger as-child>
-                    <Label
-                        :for="`${device?.uuid},${panel.parameter}`"
-                        class="whitespace-nowrap overflow-hidden text-ellipsis block max-w-full leading-none"
-                    >
-                      {{ panel.displayName || panel.parameter }}
-                    </Label>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {{ panel.displayName || panel.parameter }}
-                  </TooltipContent>
-                </TooltipRoot>
-              </TooltipProvider>
+              <div class="flex items-center gap-2 mt-2 h-4">
+                <Label
+                    :for="`${device?.uuid},${panel.parameter}`"
+                    class="whitespace-nowrap overflow-hidden text-ellipsis block max-w-full leading-none"
+                >
+                  {{ panel.displayName || panel.parameter }}
+                </Label>
 
                 <div class="w-4 h-4 flex items-center justify-center shrink-0">
                   <Tooltip v-if="!!errors[panel.parameter]">
@@ -134,8 +126,9 @@ if (!device) {
 const publishListener = await listen("mqtt-publish", (e: any) => {
   const requestRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
   const updateRegex = /^device\/(?<device>.+)\/parameters\/(?<parameter>.+)\/(?<action>.+)/;
-  const requestMatch = requestRegex.exec(e.payload.event.message.topic);
-  const updateMatch = updateRegex.exec(e.payload.event.message.topic);
+  const requestMatch = requestRegex.exec(e.payload.event.topic);
+  const updateMatch = updateRegex.exec(e.payload.event.topic);
+  console.log(e.payload.event.topic);
   if (requestMatch?.groups) handleRequest(requestMatch, e);
   else if (updateMatch?.groups) handleUpdate(updateMatch, e);
 });
@@ -144,7 +137,7 @@ const handleRequest = (match: RegExpExecArray, e: any) => {
   if (!match.groups || match.groups.action !== 'resolve') return;
   if (!activeReadRequests.has(match.groups?.request) && !activeWriteRequests.has(match.groups?.request)) return;
 
-  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as ReadRequestResponse;
+  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.payload))) as ReadRequestResponse;
   activeReadRequests.delete(match.groups?.request);
   activeWriteRequests.delete(match.groups?.request);
   if (parsedResponse.error) {
@@ -157,7 +150,7 @@ const handleRequest = (match: RegExpExecArray, e: any) => {
 
 const handleUpdate = (match: RegExpExecArray, e: any) => {
   if (!autoupdate.value || match.groups?.action !== 'update') return;
-  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.message.payload))) as UpdateMessage;
+  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.payload))) as UpdateMessage;
   if (parsedResponse.error) {
     errors[match.groups.parameter] = parsedResponse.error;
     return;

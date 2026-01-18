@@ -1,3 +1,7 @@
+export interface AppState {
+    connections: LabeqConnection[];
+}
+
 export interface LabeqDevice {
     uuid: string;
     name: string;
@@ -12,7 +16,7 @@ export interface LabeqConnection {
     apiUrl: string;
     username: string;
     password: string;
-    connected: boolean;
+    state: "Disconnected" | "Connecting" | "Connected" | "ConnectionError";
     devices: LabeqDevice[];
 }
 
