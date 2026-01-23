@@ -47,7 +47,7 @@ const form = useForm({
 const connectionStore = useConnectionStore()
 const onSubmit = form.handleSubmit(values => {
   connectionStore.connections.set(values.name, {
-    connected: false,
+    state: "Disconnected",
     id: values.name,
     mqttUrl: values.mqttUrl,
     apiUrl: values.apiUrl,

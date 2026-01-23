@@ -13,13 +13,7 @@ const modelStore = useVisualModelsStore()
 
 modelStore.autoDiscoverModels()
 
-const data = [
-  {name: 'Z1', real: 1.5, imag: 0.5},
-  {name: 'Z2', real: 0.8, imag: -0.3}
-];
-
 onMounted(async () => {
-  console.log(modelStore.models)
   invoke<string>('list_plugins').then((d: string) => console.log(JSON.parse(d))).catch(console.error)
 });
 </script>

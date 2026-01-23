@@ -24,7 +24,6 @@
                     text-foreground
                     group-data-[state=closed]/collapsible:text-muted-foreground
                     group-data-[state=closed]/collapsible:group-hover/collapsible:text-foreground
-                    group-data-[state=open]/collapsible:group-hover/collapsible:text-foreground/75
                   "
               >
                 {{ connection.id }}

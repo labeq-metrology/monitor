@@ -11,18 +11,18 @@
   </span>
   </SidebarGroupLabel>
   <Separator />
-  <SidebarMenu class="bg-background rounded-md px-1 py-2">
+  <SidebarMenu class="">
     <Collapsible v-if="connectionStore.connections.size > 0" v-for="connection in connectionStore.connections.values()" :key="connection.id"
                  class="group/collapsible">
-      <SidebarGroup class="py-0">
+      <SidebarGroup class="py-1 bg-background rounded-md">
         <SidebarGroupLabel asChild>
           <ConnectionButton :connection="connection"/>
         </SidebarGroupLabel>
         <CollapsibleContent
-            class="ml-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
+            class="ml-2 mb-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
           <TooltipProvider v-for="device in connection.devices" :key="device.uuid">
             <TooltipRoot :delayDuration="5000">
-              <TooltipTrigger asChild class="mx-2 mb-0.5 w-full">
+              <TooltipTrigger asChild class="mx-2 w-full">
                 <SidebarMenuSubButton class="select-none cursor-pointer"
                                       @click.prevent="router.push({
                             name: 'device',
@@ -61,7 +61,6 @@ import {Icon} from "@iconify/vue";
 import ConnectionButton from "@/components/monitor/sidebar/ConnectionButton.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {useRouter} from "vue-router";
-import {Tooltip} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
 
 const connectionStore = useConnectionStore();

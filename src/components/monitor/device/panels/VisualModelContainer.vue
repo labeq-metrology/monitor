@@ -2,14 +2,13 @@
 import { computed, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useVisualModelsStore } from '@/store/visual-modules.store.ts';
-import {DevicePanelProps} from "@/lib/device.ts";
 
-const props = defineProps<DevicePanelProps<any>>();
+const modelValue = defineModel<any>('value');
 
 const store = useVisualModelsStore();
-const model = computed(() => store.getModel(props.model));
+const model = computed(() => store.getModel(modelValue.value));
 
-watch(() => props.model, (newId) => {
+watch(() => modelValue.value, (newId) => {
   if (!store.getModel(newId)) {
     console.warn(`Model "${newId}" not found.`);
   }
@@ -41,7 +40,6 @@ watch(() => props.model, (newId) => {
         v-else
         :is="model.component"
         :data="value"
-        :config="config"
         class="w-full h-full animate-in fade-in zoom-in-95 duration-200"
     />
 

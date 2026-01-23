@@ -4,7 +4,7 @@ import {computed, inject, Ref, ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {ZodType} from "zod";
 
-export default <T>(panel: DevicePanelProps<any>, validator: ZodType) => {
+export default <T>(panel: DevicePanelProps, validator: ZodType) => {
     const config = ref<T | undefined>(undefined);
     const device = inject<Ref<LabeqDevice>>('device');
     console.log(device?.value)

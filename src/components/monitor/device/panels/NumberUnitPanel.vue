@@ -2,11 +2,10 @@
 import {DevicePanelProps} from "@/lib/device.ts";
 import {NumberField, NumberFieldContent, NumberFieldInput} from "@/components/ui/number-field";
 import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {Field, FieldError} from "@/components/ui/field"
+import {Field} from "@/components/ui/field"
 import usePanelConfig from "@/composables/usePanelConfig.ts";
 import {z} from "zod";
 import {ref, watch, watchEffect} from "vue";
-import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
 const NumberUnitSchema = z.object({
   units: z.array(z.string())
