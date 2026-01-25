@@ -9,6 +9,7 @@ import {
 import {Collapsible} from "@/components/ui/collapsible";
 import {useRouter} from "vue-router";
 import ConnectionMenu from "@/components/monitor/sidebar/ConnectionMenu.vue";
+import WorkspaceMenu from "@/components/monitor/sidebar/WorkspaceMenu.vue";
 const router = useRouter();
 
 </script>
@@ -24,6 +25,7 @@ const router = useRouter();
       <Collapsible defaultOpen class="group">
         <SidebarGroup>
           <ConnectionMenu />
+          <WorkspaceMenu />
         </SidebarGroup>
       </Collapsible>
     </SidebarContent>

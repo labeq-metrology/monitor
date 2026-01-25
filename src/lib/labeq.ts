@@ -8,6 +8,7 @@ export interface LabeqDevice {
     model: string;
     manufacturer: string;
     driver: string;
+    tags: string[];
 }
 
 export interface LabeqConnection {

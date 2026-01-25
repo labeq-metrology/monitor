@@ -1,15 +1,16 @@
 pub mod connection;
+pub mod workspace;
 
-use std::ops::{Deref, DerefMut};
 use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::io::AsyncWriteExt;
 use crate::state::connection::ConnectionData;
+use crate::state::workspace::LabeqWorkspace;
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct AppState {
     pub connections: Vec<ConnectionData>,
+    pub workspaces: Vec<LabeqWorkspace>,
 }
 
 pub fn update_state(app: &AppHandle, f: impl FnOnce(&mut AppState)) {

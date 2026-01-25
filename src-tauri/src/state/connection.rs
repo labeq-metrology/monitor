@@ -32,6 +32,9 @@ pub struct LabeqDevice {
     pub model: String,
     pub manufacturer: String,
     pub driver: String,
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub connection_ref: String,
 }
 
 #[tauri::command]

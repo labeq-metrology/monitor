@@ -14,7 +14,6 @@ export interface MqttConnectionEvent {
     };
 }
 
-// TODO: Move all state to Tauri in order to keep track between views
 export const useConnectionStore = defineStore('connections', () => {
     const connections = reactive<Map<string, LabeqConnection>>(new Map());
 
@@ -24,11 +23,11 @@ export const useConnectionStore = defineStore('connections', () => {
 
     listen<AppState>('app-state-update', (e) => {
         e.payload.connections.forEach(connection => connections.set(connection.id, connection));
-        console.log(connections.values())
     }).then(_ => {});
 
     const refreshDeviceList = async (connection: LabeqConnection) => {
         await invoke('update_devices', {connId: connection.id});
+        console.log(connections.values())
     };
 
     return {connections, refreshDeviceList};
