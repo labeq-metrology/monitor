@@ -26,18 +26,27 @@
                     group-data-[state=closed]/collapsible:group-hover/collapsible:text-foreground
                   "
               >
-                {{ connection.id }}
+                {{ connection.name }}
               </TooltipTrigger>
               <TooltipContent>
-                <p>{{ connection.id }}</p>
+                <p>{{ connection.name }}</p>
               </TooltipContent>
             </TooltipRoot>
           </TooltipProvider>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem @click="connectionStore.refreshDeviceList(connection)" class="cursor-pointer">
+        <ContextMenuItem @click="connectionStore.activateConnection(connection.id)" class="cursor-pointer">
+          Connect
+        </ContextMenuItem>
+        <ContextMenuItem @click="connectionStore.deactivateConnection(connection.id)" class="cursor-pointer">
+          Disconnect
+        </ContextMenuItem>
+        <ContextMenuItem @click="connectionStore.refreshDeviceList(connection.id)" class="cursor-pointer">
           Refresh
+        </ContextMenuItem>
+        <ContextMenuItem variant="destructive" class="cursor-pointer">
+          Remove
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

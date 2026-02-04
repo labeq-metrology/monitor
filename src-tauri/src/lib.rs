@@ -3,6 +3,8 @@ use crate::plugins::*;
 use crate::popup::open_popup_webview;
 use crate::state::{get_state, AppState};
 use std::sync::Mutex;
+use crate::state::workspace::*;
+
 mod errors;
 mod mqtt;
 mod plugins;
@@ -17,18 +19,41 @@ pub fn run() {
         .plugin(prevent_default())
         .manage(Mutex::new(AppState::default()))
         .invoke_handler(tauri::generate_handler![
+            create_workspace,
+            delete_workspace,
+            rename_workspace,
+            
+            add_device_to_workspace,
+            create_device_folder,
+            rename_device_folder,
+            delete_device_folder,
+            move_device_to_folder,
+            remove_device_from_workspace,
+
+            add_connection_to_workspace,
+            remove_connection_from_workspace,
+            create_connection_folder,
+            rename_connection_folder,
+            delete_connection_folder,
+            move_connection_to_folder,
+
             get_state,
-            gateway_connect,
-            gateway_disconnect,
+            test_connection,
+            create_connection,
+            connection_activate,
+            connection_deactivate,
+            connection_remove,
             gateway_publish,
             check_connection,
             update_devices,
+
             init_plugins,
             list_plugins,
             load_layout,
             get_panel_information,
             format_param_to_panel,
             format_panel_to_param,
+
             open_popup_webview
         ])
         .run(tauri::generate_context!())

@@ -9,9 +9,8 @@ import {Button} from "@/components/ui/button";
 import {Icon} from "@iconify/vue";
 import {ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
-import {listen} from '@tauri-apps/api/event'
 import {useRouter} from "vue-router";
-import {MqttConnectionEvent, useConnectionStore} from "@/store/connection.store.ts";
+import {useConnectionStore} from "@/store/connection.store.ts";
 
 enum ConnectionCheck {
   IDLE,
@@ -42,65 +41,35 @@ const form = useForm({
     username: '',
     password: '',
   }
-})
+});
 
 const connectionStore = useConnectionStore()
 const onSubmit = form.handleSubmit(values => {
-  connectionStore.connections.set(values.name, {
-    state: "Disconnected",
-    id: values.name,
-    mqttUrl: values.mqttUrl,
-    apiUrl: values.apiUrl,
-    username: values.username,
-    password: values.password,
-    devices: []
-  })
-  invoke('gateway_connect', {
+  invoke('create_connection', {
     url: values.mqttUrl,
     apiUrl: values.apiUrl,
     username: values.username,
     password: values.password,
-    connId: values.name,
-    test: false,
-  })
-  router.back()
-})
+    connName: values.name,
+    connId: crypto.randomUUID(),
+  });
+  router.back();
+});
 
 const testConnection = () => {
-  connectionCheck.value = ConnectionCheck.IN_PROGRESS
-  const name = `test-connection-${Date.now()}`
-
-  const disconnectTest = (name: string) => {
-    invoke('gateway_disconnect', {
-      connId: name,
-    })
-    connectionStore.connections.delete(name)
-  }
-
-  listen<MqttConnectionEvent>('mqtt-connected', (data) => {
-    if (data.payload.id === name) {
-      connectionCheck.value = ConnectionCheck.SUCCESS
-      disconnectTest(name)
-    }
-  })
-
-  listen<MqttConnectionEvent>('mqtt-disconnected', (data) => {
-    if (data.payload.id === name) {
-      if (connectionCheck.value === ConnectionCheck.IN_PROGRESS) {
-        connectionCheck.value = ConnectionCheck.ERROR
-        disconnectTest(name)
-      }
-    }
-  })
-
-  invoke('gateway_connect', {
+  connectionCheck.value = ConnectionCheck.IN_PROGRESS;
+  invoke<boolean>('test_connection', {
     url: form.values.mqttUrl,
     username: form.values.username,
     password: form.values.password,
-    connId: name,
-    test: true,
   })
-}
+      .then(_ => {
+        connectionCheck.value = ConnectionCheck.SUCCESS;
+      })
+      .catch(() => {
+        connectionCheck.value = ConnectionCheck.ERROR;
+      });
+};
 
 </script>
 
@@ -160,7 +129,7 @@ const testConnection = () => {
         </FormItem>
       </FormField>
     </div>
-    <div class="flex gap-4 justify-between">
+    <div class="flex gap-2 justify-between text-sm">
       <div class="flex gap-2 items-center">
         <p v-if="connectionCheck == ConnectionCheck.IDLE"/>
         <p v-else-if="connectionCheck == ConnectionCheck.IN_PROGRESS" class="flex items-center gap-2">
@@ -171,21 +140,22 @@ const testConnection = () => {
           <Icon icon="heroicons-outline:check" class="w-4"/>
           Connection successful
         </p>
-        <p v-else-if="connectionCheck == ConnectionCheck.ERROR" class="flex items-center gap-2 text-destructive-foreground">
+        <p v-else-if="connectionCheck == ConnectionCheck.ERROR"
+           class="flex items-center gap-2 text-destructive-foreground">
           <Icon icon="heroicons-outline:x"/>
           Connection failed
         </p>
       </div>
       <div class="flex gap-2">
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" class="h-8">
           <Icon icon="heroicons-outline:check"/>
           <span>Save</span>
         </Button>
-        <Button variant="secondary" @click.prevent="testConnection">
+        <Button variant="secondary" @click.prevent="testConnection" class="h-8">
           <Icon icon="heroicons-outline:signal"/>
           <span>Test connection</span>
         </Button>
-        <Button variant="destructive" @click.prevent="router.back()">
+        <Button variant="destructive" @click.prevent="router.back()" class="h-8">
           <Icon icon="heroicons-outline:x"/>
           <span>Cancel</span>
         </Button>

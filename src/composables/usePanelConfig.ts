@@ -7,7 +7,7 @@ import {ZodType} from "zod";
 export default <T>(panel: DevicePanelProps, validator: ZodType) => {
     const config = ref<T | undefined>(undefined);
     const device = inject<Ref<LabeqDevice>>('device');
-    console.log(device?.value)
+    
     if (!device) return computed(() => undefined);
     invoke<string>('get_panel_information', {
         driver: device.value.driver,

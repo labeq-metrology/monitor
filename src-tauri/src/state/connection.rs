@@ -16,10 +16,12 @@ pub enum ConnectionState {
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionData {
     pub id: String,
+    pub name: String,
     pub mqtt_url: String,
     pub api_url: String,
     pub username: String,
     pub password: String,
+    #[serde(default)]
     pub state: ConnectionState,
     pub devices: Vec<LabeqDevice>,
 }

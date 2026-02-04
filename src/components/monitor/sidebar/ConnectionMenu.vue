@@ -1,26 +1,26 @@
 <template>
-  <Collapsible class="group/connections-section-label">
-    <CollapsibleTrigger class="w-full" as-child>
-      <SidebarGroupLabel class="flex items-center gap-2">
-        <div class="flex items-center gap-2 cursor-pointer">
+  <Collapsible class="group/connections-section">
+    <SidebarGroupLabel class="flex items-center gap-2 group/connections-section-label">
+      <div class="flex items-center gap-2 cursor-pointer">
+        <CollapsibleTrigger class="w-full" as-child>
           <Icon
               icon="heroicons:chevron-down"
-              class="transition-transform duration-300 group-data-[state=closed]/connections-section-label:rotate-180 -ml-2 text-accent-foreground self-end"
+              class="transition-transform duration-300 group-data-[state=closed]/connections-section:rotate-180 -ml-2 text-accent-foreground self-end"
               width="16"
               height="16"
           />
-          <p>Connections</p>
-        </div>
-        <div
-            class="group-hover/connections-section-label:opacity-100 group-hover/connections-section-label:visible opacity-0 invisible transition-all duration-200 ml-auto">
-          <RouterLink to="/new-connection">
-            <Button variant="link" class="w-4 h-4 m-0 p-0 flex items-center justify-center text-accent-foreground/50">
-              <Icon icon="heroicons:plus" width="16" height="16"/>
-            </Button>
-          </RouterLink>
-        </div>
-      </SidebarGroupLabel>
-    </CollapsibleTrigger>
+        </CollapsibleTrigger>
+        <p>Connections</p>
+      </div>
+      <div
+          class="group-hover/connections-section-label:opacity-100 group-hover/connections-section-label:visible opacity-0 invisible transition-all duration-200 ml-auto">
+        <RouterLink to="/new-connection">
+          <Button variant="link" class="w-4 h-4 m-0 p-0 flex items-center justify-center text-accent-foreground/50">
+            <Icon icon="heroicons:plus" width="16" height="16"/>
+          </Button>
+        </RouterLink>
+      </div>
+    </SidebarGroupLabel>
     <CollapsibleContent>
       <SidebarMenu class="">
         <Collapsible v-if="connectionStore.connections.size > 0"
