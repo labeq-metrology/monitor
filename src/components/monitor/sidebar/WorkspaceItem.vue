@@ -1,6 +1,7 @@
 <template>
   <div>
-    <CollapsibleTrigger class="group/workspace transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md">
+    <CollapsibleTrigger
+        class="group/workspace transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md">
       <ContextMenu>
         <ContextMenuTrigger asChild class="text-sm text-accent-background">
           <div class="flex items-center space-x-2 w-full">
@@ -66,28 +67,51 @@
     </CollapsibleTrigger>
 
     <CollapsibleContent>
-      <div class="ml-4 space-y-1 bg-background rounded-md p-2 overflow-y-auto">
-        <div>
-          <div class="text-xs font-semibold text-muted-foreground px-2 pb-1">
-            Connections
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div class="ml-4 space-y-1 bg-background rounded-md p-2 overflow-hidden">
+            <div>
+              <div class="text-xs font-semibold text-muted-foreground px-2 pb-1">
+                Connections
+              </div>
+              <WorkspaceConnectionList :workspace-id="workspace.id" :connections="workspace.connections"/>
+            </div>
+            <hr class="my-2 border-border"/>
+            <!-- Devices Section -->
+            <div>
+              <div class="text-xs font-semibold text-muted-foreground px-2 pb-1">
+                Devices
+              </div>
+              <WorkspaceDeviceList
+                  :workspace-id="workspace.id"
+                  :device-folders="workspace.devices"
+                  @create-folder="handleCreateFolder"
+                  @rename-folder="handleRenameFolder"
+                  @delete-folder="handleDeleteFolder"
+              />
+            </div>
           </div>
-          <WorkspaceConnectionList :workspace-id="workspace.id" :connections="workspace.connections" />
-        </div>
-        <hr class="my-2 border-border"/>
-        <!-- Devices Section -->
-        <div>
-          <div class="text-xs font-semibold text-muted-foreground px-2 pb-1">
-            Devices
-          </div>
-          <WorkspaceDeviceList
-              :workspace-id="workspace.id"
-              :device-folders="workspace.devices"
-              @create-folder="handleCreateFolder"
-              @rename-folder="handleRenameFolder"
-              @delete-folder="handleDeleteFolder"
-          />
-        </div>
-      </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent class="overflow-hidden">
+          <ContextMenuSub>
+            <ContextMenuSubTrigger class="text-xs py-1 px-2">Attach</ContextMenuSubTrigger>
+            <ContextMenuSubContent :align-offset="-5">
+              <ContextMenuItem>
+                <Icon icon="heroicons:folder-16-solid"/>
+                Folder
+              </ContextMenuItem>
+              <ContextMenuItem>
+                <Icon icon="heroicons:cpu-chip-16-solid"/>
+                Device
+              </ContextMenuItem>
+              <ContextMenuItem>
+                <Icon icon="heroicons:signal-16-solid"/>
+                Connection
+              </ContextMenuItem>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        </ContextMenuContent>
+      </ContextMenu>
     </CollapsibleContent>
   </div>
 </template>
@@ -95,10 +119,16 @@
 <script setup lang="ts">
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {Icon} from "@iconify/vue";
-import {CollapsibleTrigger, CollapsibleContent, TooltipRoot} from "reka-ui";
+import {CollapsibleContent, CollapsibleTrigger, TooltipRoot} from "reka-ui";
 import {LabeqWorkspace} from "@/lib/labeq.ts";
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu";
-import {ref, nextTick} from "vue";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger,
+  ContextMenuTrigger
+} from "@/components/ui/context-menu";
+import {nextTick, ref} from "vue";
 import WorkspaceDeviceList from "@/components/monitor/sidebar/WorkspaceDeviceList.vue";
 import WorkspaceConnectionList from "@/components/monitor/sidebar/WorkspaceConnectionList.vue";
 

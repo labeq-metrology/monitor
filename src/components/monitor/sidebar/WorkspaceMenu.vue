@@ -96,7 +96,7 @@ const handleDeleteWorkspace = (workspace: LabeqWorkspace) => {
 };
 
 const handleCreateFolder = (workspaceId: string, parentId: string | undefined, folderName: string) => {
-  workspaceStore.addDeviceFolder(workspaceId, parentId, folderName);
+  workspaceStore.createDeviceFolder(workspaceId, parentId, folderName);
 };
 
 const handleRenameFolder = (workspaceId: string, folderId: string, newName: string) => {
