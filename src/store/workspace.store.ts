@@ -55,6 +55,29 @@ export const useWorkspaceSore = defineStore('workspaces', () => {
         connectionId
     });
 
+    const createConnectionFolder = async (workspaceId: string, parentId: string | undefined, folderName: string) => invoke<void>('create_connection_folder', {
+        workspaceId,
+        parentId,
+        folderName
+    });
+
+    const renameConnectionFolder = async (workspaceId: string, folderId: string, newName: string) => invoke<void>('rename_connection_folder', {
+        workspaceId,
+        folderId,
+        newName
+    });
+
+    const deleteConnectionFolder = async (workspaceId: string, folderId: string) => invoke<void>('delete_connection_folder', {
+        workspaceId,
+        folderId
+    });
+
+    const moveConnectionToFolder = async (workspaceId: string, connectionId: string, folderId: string | undefined) => invoke<void>('move_connection_to_folder', {
+        workspaceId,
+        connectionId,
+        folderId
+    });
+
     invoke<AppState>('get_state').then(state => {
         state.workspaces.forEach(workspace => workspaces.set(workspace.id, workspace));
     });
@@ -76,6 +99,11 @@ export const useWorkspaceSore = defineStore('workspaces', () => {
         renameDeviceFolder,
         deleteDeviceFolder,
         moveDeviceToFolder,
+
+        createConnectionFolder,
+        renameConnectionFolder,
+        deleteConnectionFolder,
+        moveConnectionToFolder,
 
         addConnectionToWorkspace,
         removeConnectionFromWorkspace

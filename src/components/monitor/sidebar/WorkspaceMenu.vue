@@ -1,8 +1,8 @@
 <template>
   <Collapsible class="group/workspaces-section">
       <SidebarGroupLabel class="flex items-center gap-2 group/workspaces-section-label">
-        <div class="flex items-center gap-2 cursor-pointer">
-          <CollapsibleTrigger class="w-full" as-child>
+        <div class="flex items-center gap-2 cursor-default">
+          <CollapsibleTrigger class="w-full cursor-pointer" as-child>
           <Icon
               icon="heroicons:chevron-down"
               class="transition-transform duration-300 group-data-[state=closed]/workspaces-section:rotate-180 -ml-2 text-accent-foreground self-end"
