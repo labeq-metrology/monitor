@@ -1,7 +1,6 @@
 <template>
-  <AlertDialog v-model:open="isAddingDevice" v-model:device="selectedDevice" v-model:connection="selectedConnection"
-               @confirm="handleDeviceConfirm">
-    <AddDeviceDialog :workspace-id="workspaceId"/>
+  <AlertDialog v-model:open="isAddingDevice">
+    <AddDeviceDialog :workspace-id="workspaceId" @confirm="handleDeviceConfirm"/>
   </AlertDialog>
   <ContextMenu>
     <ContextMenuTrigger>
@@ -55,13 +54,13 @@
           <div
               v-else
               class="
-          group flex items-center gap-2 w-full px-2 h-8
+          group flex items-center gap-2 w-full h-6
           rounded-md hover:bg-accent/50 transition-colors cursor-pointer
         "
           >
             <Icon
-                icon="heroicons:cpu-chip"
-                class="text-muted-foreground ml-4 shrink-0"
+                icon="heroicons:cpu-chip-solid"
+                class="text-muted-foreground ml-2 shrink-0"
                 width="16"
                 height="16"
             />
@@ -90,18 +89,6 @@
                 </TooltipRoot>
               </TooltipProvider>
             </div>
-
-            <button
-                @click.stop="handleRemoveDevice(item.value.uuid)"
-                class="
-            opacity-0 group-hover:opacity-100
-            flex items-center justify-center
-            h-6 w-6 shrink-0
-            hover:bg-destructive/10 rounded transition-all
-          "
-            >
-              <Icon icon="heroicons:trash" width="14" height="14" class="text-destructive shrink-0"/>
-            </button>
           </div>
         </template>
 
@@ -109,7 +96,7 @@
             v-if="deviceFolders.items.length === 0 && !isCreatingFolder"
             class="flex items-center px-2 py-1"
         >
-          <span class="text-muted-foreground text-xs">No devices</span>
+          <span class="text-muted-foreground text-xs select-none cursor-default">No devices</span>
         </div>
       </div>
     </ContextMenuTrigger>
@@ -136,7 +123,7 @@ import {Icon} from "@iconify/vue";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {TooltipRoot} from "reka-ui";
 import DeviceFolder from "./DeviceFolder.vue";
-import type {Folder, LabeqDevice} from "@/lib/labeq.ts";
+import {Folder, LabeqDevice, LabeqWorkspace} from "@/lib/labeq.ts";
 import {computed, nextTick, ref} from "vue";
 import {useWorkspaceSore} from "@/store/workspace.store.ts";
 import {
@@ -152,6 +139,12 @@ import {AlertDialog} from "@/components/ui/alert-dialog";
 import AddDeviceDialog from "@/components/monitor/dialogs/AddDeviceDialog.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
 
+defineEmits<{
+  createFolder: [workspaceId: string, parentId: string | undefined, folderName: string]
+  renameFolder: [workspaceId: string, folderId: string, newName: string]
+  deleteFolder: [workspaceId: string, folderId: string]
+}>();
+
 const props = defineProps<{
   workspaceId: string
   deviceFolders: Folder<LabeqDevice>
@@ -164,18 +157,16 @@ const isCreatingFolder = ref(false);
 const isAddingDevice = ref(false);
 const newFolderName = ref("");
 const folderNameInput = ref<HTMLInputElement | null>(null);
-
-const selectedConnectionId = ref<string>("");
-const selectedDeviceId = ref<string>("");
-
-const selectedConnection = computed(() => connectionStore.connections.get(selectedConnectionId.value));
-const selectedDevice = computed(() => selectedConnection.value?.devices.find(d => d.uuid === selectedDeviceId.value));
-
-const handleDeviceConfirm = async () => {
+const handleDeviceConfirm = async (connectionId: string, deviceId: string) => {
   isAddingDevice.value = false;
-  if (!selectedConnection.value || !selectedDevice.value) return;
-  await store.addConnectionToWorkspace(props.workspaceId, selectedConnection.value);
-  await store.addDeviceToWorkspace(props.workspaceId, selectedDevice.value);
+
+  if (!connectionId || !deviceId) return;
+  const selectedConnection = connectionStore.connections.get(connectionId);
+  const selectedDevice = selectedConnection?.devices.find(d => d.uuid === deviceId);
+
+  if (!selectedConnection || !selectedDevice) return;
+  await store.addConnectionToWorkspace(props.workspaceId, selectedConnection);
+  await store.addDeviceToWorkspace(props.workspaceId, selectedDevice);
 };
 
 const startCreatingFolder = () => {

@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {computed, ref} from "vue";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Select, SelectContent, SelectItem, SelectLabel, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {useWorkspaceSore} from "@/store/workspace.store.ts";
 import {Item, LabeqConnection} from "@/lib/labeq.ts";
+import {Icon} from "@iconify/vue";
 
 const props = defineProps<{ workspaceId: string }>();
 
@@ -44,15 +45,20 @@ defineEmits(['confirm']);
 <template>
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle>Add Device</AlertDialogTitle>
+      <AlertDialogTitle>Add Connection</AlertDialogTitle>
     </AlertDialogHeader>
     <AlertDialogDescription>
       <Select v-model="selectedConnection">
-        <SelectTrigger>
+        <SelectLabel>Connection</SelectLabel>
+        <SelectTrigger class="max-h-6 px-2 py-3 w-full">
           <SelectValue placeholder="Select connection"/>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem v-for="conn in availableConnections" :key="conn.id" :value="conn.id">
+          <SelectItem class="max-h-6 h-6" v-for="conn in availableConnections" :key="conn.id" :value="conn.id">
+            <Icon
+                :icon="conn.state == 'Connected' ? 'heroicons:signal-16-solid' : 'heroicons:signal-slash-16-solid'"
+                :class="conn.state == 'Connected' ? 'text-positive text-lg' : 'text-muted-foreground text-lg'"
+            />
             {{ conn.name }}
           </SelectItem>
         </SelectContent>

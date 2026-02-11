@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {computed} from "vue";
-import {Select, SelectTrigger, SelectContent, SelectItem, SelectValue} from "@/components/ui/select";
+import {Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectLabel} from "@/components/ui/select";
 import {useWorkspaceSore} from "@/store/workspace.store.ts";
 import {Item, LabeqConnection} from "@/lib/labeq.ts";
+import {Icon} from "@iconify/vue";
 
 const props = defineProps<{ workspaceId: string }>();
 
@@ -46,21 +47,27 @@ defineEmits(['confirm']);
     </AlertDialogHeader>
     <AlertDialogDescription>
       <Select v-model="selectedConnection">
-        <SelectTrigger>
+        <SelectLabel>Connection</SelectLabel>
+        <SelectTrigger class="max-h-6 px-2 py-3 w-full">
           <SelectValue placeholder="Select connection"/>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem v-for="conn in allConnections" :key="conn.id" :value="conn.id">
+          <SelectItem class="max-h-6 h-6" v-for="conn in allConnections" :key="conn.id" :value="conn.id">
+            <Icon
+                :icon="conn.state == 'Connected' ? 'heroicons:signal-16-solid' : 'heroicons:signal-slash-16-solid'"
+                :class="conn.state == 'Connected' ? 'text-positive text-lg' : 'text-muted-foreground text-lg'"
+            />
             {{ conn.name }}
           </SelectItem>
         </SelectContent>
       </Select>
       <Select v-model="device">
-        <SelectTrigger>
+        <SelectLabel>Device</SelectLabel>
+        <SelectTrigger class="max-h-6 px-2 py-3 w-full">
           <SelectValue placeholder="Select device"/>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem v-if="connection" v-for="device in connection.devices" :key="device.uuid" :value="device.uuid">
+          <SelectItem class="max-h-6 h-6" v-if="connection" v-for="device in connection.devices" :key="device.uuid" :value="device.uuid">
             {{ device.name ?? device.uuid }}
           </SelectItem>
         </SelectContent>
@@ -68,7 +75,7 @@ defineEmits(['confirm']);
     </AlertDialogDescription>
     <AlertDialogFooter>
       <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction @click="$emit('confirm')">Add</AlertDialogAction>
+      <AlertDialogAction @click="$emit('confirm', selectedConnection, device)">Add</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
 </template>

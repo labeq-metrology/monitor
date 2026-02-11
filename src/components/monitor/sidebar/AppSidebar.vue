@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarHeader,
-} from "@/components/ui/sidebar"
+import {Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader,} from "@/components/ui/sidebar"
 import {Collapsible} from "@/components/ui/collapsible";
 import {useRouter} from "vue-router";
 import ConnectionMenu from "@/components/monitor/sidebar/ConnectionMenu.vue";
 import WorkspaceMenu from "@/components/monitor/sidebar/WorkspaceMenu.vue";
+import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
+
 const router = useRouter();
 
 </script>
@@ -22,13 +18,18 @@ const router = useRouter();
       </div>
     </SidebarHeader>
     <SidebarContent>
-      <Collapsible defaultOpen class="group">
-        <SidebarGroup>
-          <ConnectionMenu />
-          <WorkspaceMenu />
-        </SidebarGroup>
-      </Collapsible>
+      <ScrollArea class="h-full w-full border-t border-b">
+        <ScrollBar orientation="vertical" />
+        <Collapsible defaultOpen class="group">
+          <SidebarGroup>
+            <ConnectionMenu/>
+            <WorkspaceMenu/>
+          </SidebarGroup>
+        </Collapsible>
+      </ScrollArea>
     </SidebarContent>
-    <SidebarFooter></SidebarFooter>
+    <SidebarFooter>
+      s
+    </SidebarFooter>
   </Sidebar>
 </template>
