@@ -12,13 +12,13 @@ import {
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {computed} from "vue";
 import {Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectLabel} from "@/components/ui/select";
-import {useWorkspaceSore} from "@/store/workspace.store.ts";
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {Item, LabeqConnection} from "@/lib/labeq.ts";
 import {Icon} from "@iconify/vue";
 
 const props = defineProps<{ workspaceId: string }>();
 
-const workspaceStore = useWorkspaceSore();
+const workspaceStore = useWorkspaceStore();
 const workspace = computed(() => workspaceStore.workspaces.get(props.workspaceId));
 
 const connectionStore = useConnectionStore();
@@ -28,9 +28,9 @@ const selectedConnection = defineModel<string>('connection');
 const device = defineModel<string>('device');
 
 const allConnections = computed(() => {
-  const flatten = (items: Item<LabeqConnection>[]): LabeqConnection[] => {
+  const flatten = (items: Item<string>[]): LabeqConnection[] => {
     return items.flatMap(item =>
-        item.type === 'item' ? [item.value] : flatten(item.value.items)
+        item.type === 'item' ? connectionStore.connections.get(item.value)!! : flatten(item.value.items)
     );
   };
   if (!workspace.value) return [];

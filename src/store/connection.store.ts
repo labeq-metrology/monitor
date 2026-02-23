@@ -22,6 +22,10 @@ export const useConnectionStore = defineStore('connections', () => {
     });
 
     listen<AppState>('app-state-update', (e) => {
+        const ids = new Set(e.payload.workspaces.map(w => w.id));
+        for (const key of connections.keys()) {
+            if (!ids.has(key)) connections.delete(key);
+        }
         e.payload.connections.forEach(connection => connections.set(connection.id, connection));
     })
 

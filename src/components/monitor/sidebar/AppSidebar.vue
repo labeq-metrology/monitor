@@ -2,8 +2,8 @@
 import {Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader,} from "@/components/ui/sidebar"
 import {Collapsible} from "@/components/ui/collapsible";
 import {useRouter} from "vue-router";
-import ConnectionMenu from "@/components/monitor/sidebar/ConnectionMenu.vue";
-import WorkspaceMenu from "@/components/monitor/sidebar/WorkspaceMenu.vue";
+import ConnectionMenu from "@/components/monitor/sidebar/connection/ConnectionMenu.vue";
+import WorkspaceMenu from "@/components/monitor/sidebar/workspace/WorkspaceMenu.vue";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 
 const router = useRouter();

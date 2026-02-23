@@ -93,8 +93,8 @@ import {CollapsibleContent, CollapsibleTrigger, TooltipRoot} from "reka-ui";
 import {LabeqWorkspace} from "@/lib/labeq.ts";
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu";
 import {nextTick, ref} from "vue";
-import WorkspaceDeviceList from "@/components/monitor/sidebar/WorkspaceDeviceList.vue";
-import WorkspaceConnectionList from "@/components/monitor/sidebar/WorkspaceConnectionList.vue";
+import WorkspaceDeviceList from "@/components/monitor/sidebar/workspace/WorkspaceDeviceList.vue";
+import WorkspaceConnectionList from "@/components/monitor/sidebar/workspace/WorkspaceConnectionList.vue";
 
 const props = defineProps<{
   workspace: LabeqWorkspace

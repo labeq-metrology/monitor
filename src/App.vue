@@ -6,7 +6,8 @@ import Navbar from "@/components/monitor/navbar/Navbar.vue";
 import {SidebarProvider} from "@/components/ui/sidebar";
 import AppSidebar from "@/components/monitor/sidebar/AppSidebar.vue";
 import 'vue-sonner/style.css'
-
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
+useWorkspaceStore();
 invoke('init_plugins')
 </script>
 

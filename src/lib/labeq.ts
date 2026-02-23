@@ -40,8 +40,8 @@ export interface NestedFolder<T> {
 export interface LabeqWorkspace {
     id: string;
     name: string;
-    connections: Folder<LabeqConnection>;
-    devices: Folder<LabeqDevice>;
+    connections: Folder<string>;
+    devices: Folder<string>;
 }
 
 export interface ReadRequestResponse {

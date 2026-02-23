@@ -64,14 +64,14 @@ import {Icon} from "@iconify/vue";
 import {Button} from "@/components/ui/button";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {SidebarGroupLabel, SidebarMenu} from "@/components/ui/sidebar";
-import {useWorkspaceSore} from "@/store/workspace.store.ts";
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {computed, ref} from "vue";
 import type {LabeqWorkspace} from "@/lib/labeq.ts";
-import WorkspaceCreator from "@/components/monitor/sidebar/WorkspaceCreator.vue";
-import WorkspaceItem from "@/components/monitor/sidebar/WorkspaceItem.vue";
+import WorkspaceCreator from "@/components/monitor/sidebar/workspace/WorkspaceCreator.vue";
+import WorkspaceItem from "@/components/monitor/sidebar/workspace/WorkspaceItem.vue";
 
 const workspacesPresent = computed(() => workspaceStore.workspaces.size > 0);
-const workspaceStore = useWorkspaceSore();
+const workspaceStore = useWorkspaceStore();
 const isCreating = ref(false);
 
 const startCreatingWorkspace = () => {

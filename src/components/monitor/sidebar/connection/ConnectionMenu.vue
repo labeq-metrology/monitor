@@ -63,12 +63,12 @@
 </template>
 
 <script setup lang="ts">
-import {SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuSubButton} from "@/components/ui/sidebar/index.ts";
-import {Button} from "@/components/ui/button/index.ts";
-import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip/index.ts";
-import {Collapsible, CollapsibleContent} from "@/components/ui/collapsible/index.ts";
+import {SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuSubButton} from "@/components/ui/sidebar";
+import {Button} from "@/components/ui/button";
+import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {Collapsible, CollapsibleContent} from "@/components/ui/collapsible";
 import {Icon} from "@iconify/vue";
-import ConnectionButton from "@/components/monitor/sidebar/ConnectionButton.vue";
+import ConnectionButton from "@/components/monitor/sidebar/connection/ConnectionButton.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {useRouter} from "vue-router";
 import {TooltipRoot} from "reka-ui";

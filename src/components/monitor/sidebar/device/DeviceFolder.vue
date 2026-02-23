@@ -1,13 +1,12 @@
 <template>
-  <Collapsible class="group/connection-folder">
-    <CollapsibleTrigger
-        class="group/folder-trigger transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md hover:bg-accent/50">
+  <Collapsible class="group/device-folder">
+    <CollapsibleTrigger class="group/folder-trigger transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md hover:bg-accent/50">
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div class="flex items-center space-x-2 w-full">
             <Icon
                 icon="heroicons:chevron-down"
-                class="transition-transform duration-300 group-data-[state=closed]/connection-folder:-rotate-90 text-accent-foreground"
+                class="transition-transform duration-300 group-data-[state=closed]/device-folder:-rotate-90 text-accent-foreground"
                 width="16"
                 height="16"
             />
@@ -17,27 +16,21 @@
                 width="16"
                 height="16"
             />
-            <TooltipProvider v-if="!isEditing">
-              <TooltipRoot :delayDuration="3000">
-                <TooltipTrigger
-                    @dblclick="startEditing"
-                    class="
-                      text-xs font-normal tracking-wide
-                      text-left flex-1
-                      whitespace-nowrap overflow-hidden overflow-ellipsis
-                      cursor-pointer transition-colors
-                      text-foreground
-                      group-data-[state=closed]/connection-folder:text-muted-foreground
-                      group-data-[state=closed]/connection-folder:group-hover/folder-trigger:text-foreground
-                    "
-                >
-                  {{ folder.name }}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{{ folder.name }}</p>
-                </TooltipContent>
-              </TooltipRoot>
-            </TooltipProvider>
+            <span
+                v-if="!isEditing"
+                @dblclick="startEditing"
+                class="
+                  text-xs font-normal tracking-wide
+                  text-left flex-1
+                  whitespace-nowrap overflow-hidden overflow-ellipsis
+                  cursor-pointer transition-colors
+                  text-foreground
+                  group-data-[state=closed]/device-folder:text-muted-foreground
+                  group-data-[state=closed]/device-folder:group-hover/folder-trigger:text-foreground
+                "
+            >
+              {{ folder.name }}
+            </span>
             <input
                 v-else
                 ref="nameInput"
@@ -55,7 +48,7 @@
                   h-[1.125rem] leading-[1.125rem]
                 "
             />
-            <span class="text-xs text-muted-foreground">{{ itemCount }}</span>
+            <span class="text-xs text-muted-foreground h-[1.125rem] leading-[1.125rem]">{{ itemCount }}</span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -113,7 +106,7 @@
         </div>
 
         <template v-for="(item, index) in folder.items" :key="index">
-          <ConnectionFolder
+          <DeviceFolder
               v-if="item.type === 'folder'"
               :folder="item.value"
               :workspace-id="workspaceId"
@@ -124,7 +117,7 @@
               class="flex items-center space-x-2 w-full px-2 py-1 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
           >
             <Icon
-                icon="heroicons:link"
+                icon="heroicons:cpu-chip"
                 class="text-muted-foreground ml-4"
                 width="16"
                 height="16"
@@ -145,15 +138,14 @@
                 <TooltipContent>
                   <div class="space-y-1">
                     <p><span class="font-semibold">Name:</span> {{ item.value.name }}</p>
-                    <p><span class="font-semibold">Type:</span> {{ item.value.type }}</p>
-                    <p v-if="item.value.description"><span class="font-semibold">Description:</span>
-                      {{ item.value.description }}</p>
+                    <p><span class="font-semibold">Model:</span> {{ item.value.model }}</p>
+                    <p><span class="font-semibold">Manufacturer:</span> {{ item.value.manufacturer }}</p>
                   </div>
                 </TooltipContent>
               </TooltipRoot>
             </TooltipProvider>
             <button
-                @click="handleRemoveConnection(item.value.id)"
+                @click="handleRemoveDevice(item.value.id)"
                 class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
             >
               <Icon icon="heroicons:trash" width="14" height="14" class="text-destructive"/>
@@ -172,15 +164,14 @@ import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu";
 import {TooltipRoot} from "reka-ui";
 import type {NestedFolder} from "@/lib/labeq.ts";
-import {computed, nextTick, ref} from "vue";
-import {useWorkspaceSore} from "@/store/workspace.store.ts";
-
+import {ref, nextTick, computed} from "vue";
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
 const props = defineProps<{
   folder: NestedFolder<any>
   workspaceId: string
 }>()
 
-const store = useWorkspaceSore();
+const store = useWorkspaceStore();
 
 const isEditing = ref(false);
 const editingName = ref(props.folder.name);
@@ -194,7 +185,6 @@ const itemCount = computed(() => {
   return props.folder.items.filter(item => item.type === 'item').length;
 });
 
-// Folder editing
 const startEditing = () => {
   isEditing.value = true;
   editingName.value = props.folder.name;
@@ -206,7 +196,7 @@ const startEditing = () => {
 
 const confirmEdit = async () => {
   if (editingName.value.trim() && editingName.value !== props.folder.name) {
-    await store.renameConnectionFolder(props.workspaceId, props.folder.id, editingName.value.trim());
+    await store.renameDeviceFolder(props.workspaceId, props.folder.id, editingName.value.trim());
   }
   isEditing.value = false;
 };
@@ -217,22 +207,21 @@ const cancelEdit = () => {
 };
 
 const handleDelete = async () => {
-  if (confirm(`Delete folder "${props.folder.name}" and all its contents?`)) {
-    await store.deleteConnectionFolder(props.workspaceId, props.folder.id);
-  }
+  await store.deleteDeviceFolder(props.workspaceId, props.folder.id);
 };
 
-// Subfolder creation
 const handleAddSubfolder = () => {
   isCreatingSubfolder.value = true;
   nextTick(() => {
-    subfolderNameInput.value?.focus();
+    setTimeout(() => {
+      subfolderNameInput.value?.focus();
+    }, 250);
   });
 };
 
 const confirmCreateSubfolder = async () => {
   if (newSubfolderName.value.trim()) {
-    await store.createConnectionFolder(props.workspaceId, props.folder.id, newSubfolderName.value.trim());
+    await store.createDeviceFolder(props.workspaceId, props.folder.id, newSubfolderName.value.trim());
     newSubfolderName.value = "";
     isCreatingSubfolder.value = false;
   } else {
@@ -255,9 +244,9 @@ const cancelCreateSubfolder = () => {
   isCreatingSubfolder.value = false;
 };
 
-const handleRemoveConnection = async (connectionId: string) => {
-  if (confirm('Remove this connection from workspace?')) {
-    await store.removeConnectionFromWorkspace(props.workspaceId, connectionId);
+const handleRemoveDevice = async (deviceId: string) => {
+  if (confirm('Remove this device from workspace?')) {
+    await store.removeDeviceFromWorkspace(props.workspaceId, deviceId);
   }
 };
 </script>

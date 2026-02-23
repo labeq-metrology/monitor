@@ -51,44 +51,10 @@
               :workspace-id="workspaceId"
           />
 
-          <div
-              v-else
-              class="
-          group flex items-center gap-2 w-full h-6
-          rounded-md hover:bg-accent/50 transition-colors cursor-pointer
-        "
-          >
-            <Icon
-                icon="heroicons:cpu-chip-solid"
-                class="text-muted-foreground ml-2 shrink-0"
-                width="16"
-                height="16"
-            />
-
-            <div class="flex-1 min-w-0 flex items-center">
-              <TooltipProvider>
-                <TooltipRoot :delayDuration="3000">
-                  <TooltipTrigger as-child>
-                    <div
-                        class="
-                    text-xs font-normal truncate
-                    text-left w-full
-                    text-foreground
-                  "
-                    >
-                      {{ item.value.name }}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div class="space-y-1">
-                      <p><span class="font-semibold">Name:</span> {{ item.value.name }}</p>
-                      <p><span class="font-semibold">Model:</span> {{ item.value.model }}</p>
-                      <p><span class="font-semibold">Manufacturer:</span> {{ item.value.manufacturer }}</p>
-                    </div>
-                  </TooltipContent>
-                </TooltipRoot>
-              </TooltipProvider>
-            </div>
+          <div v-else>
+            <DeviceButton
+                :device="connectionStore.connections.get(item.value[0])!!.devices.find(d => d.uuid === item.value[1])!!"
+                :connection="connectionStore.connections.get(item.value[0])!!"/>
           </div>
         </template>
 
@@ -120,12 +86,10 @@
 
 <script setup lang="ts">
 import {Icon} from "@iconify/vue";
-import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import {TooltipRoot} from "reka-ui";
-import DeviceFolder from "./DeviceFolder.vue";
-import {Folder, LabeqDevice, LabeqWorkspace} from "@/lib/labeq.ts";
-import {computed, nextTick, ref} from "vue";
-import {useWorkspaceSore} from "@/store/workspace.store.ts";
+import DeviceFolder from "../device/DeviceFolder.vue";
+import {Folder} from "@/lib/labeq.ts";
+import {nextTick, ref} from "vue";
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -138,6 +102,7 @@ import {
 import {AlertDialog} from "@/components/ui/alert-dialog";
 import AddDeviceDialog from "@/components/monitor/dialogs/AddDeviceDialog.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
+import DeviceButton from "@/components/monitor/sidebar/device/DeviceButton.vue";
 
 defineEmits<{
   createFolder: [workspaceId: string, parentId: string | undefined, folderName: string]
@@ -147,11 +112,11 @@ defineEmits<{
 
 const props = defineProps<{
   workspaceId: string
-  deviceFolders: Folder<LabeqDevice>
+  deviceFolders: Folder<[string, string]>
 }>();
 
 const connectionStore = useConnectionStore();
-const store = useWorkspaceSore();
+const store = useWorkspaceStore();
 
 const isCreatingFolder = ref(false);
 const isAddingDevice = ref(false);
@@ -165,8 +130,8 @@ const handleDeviceConfirm = async (connectionId: string, deviceId: string) => {
   const selectedDevice = selectedConnection?.devices.find(d => d.uuid === deviceId);
 
   if (!selectedConnection || !selectedDevice) return;
-  await store.addConnectionToWorkspace(props.workspaceId, selectedConnection);
-  await store.addDeviceToWorkspace(props.workspaceId, selectedDevice);
+  await store.addConnectionToWorkspace(props.workspaceId, selectedConnection.id);
+  await store.addDeviceToWorkspace(props.workspaceId, selectedConnection.id, selectedDevice.uuid);
 };
 
 const startCreatingFolder = () => {

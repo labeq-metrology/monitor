@@ -1,15 +1,13 @@
-// src-tauri/src/state/workspace.rs
+use crate::state::{update_state, AppState};
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
-use crate::state::{update_state, AppState};
-use crate::state::connection::{ConnectionData, LabeqDevice};
 
 #[derive(Default, Clone, Deserialize, Serialize)]
 pub struct LabeqWorkspace {
     pub id: String,
     pub name: String,
-    pub connections: Folder<ConnectionData>,
-    pub devices: Folder<LabeqDevice>,
+    pub connections: Folder<String>,
+    pub devices: Folder<(String, String)>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -17,7 +15,7 @@ pub struct Folder<T> {
     pub items: Vec<Item<T>>,
 }
 
-impl <T> Default for Folder<T> {
+impl<T> Default for Folder<T> {
     fn default() -> Self {
         Self { items: vec![] }
     }
@@ -37,32 +35,14 @@ pub struct NestedFolder<T> {
     pub items: Vec<Item<T>>,
 }
 
-// Trait to get ID from different types
-trait HasId {
-    fn id(&self) -> &str;
-}
-
-impl HasId for LabeqDevice {
-    fn id(&self) -> &str {
-        &self.uuid
-    }
-}
-
-impl HasId for ConnectionData {
-    fn id(&self) -> &str {
-        &self.id
-    }
-}
-
 #[tauri::command]
 pub fn create_workspace(app: AppHandle, name: String) -> String {
-    let id: String = uuid::Uuid::new_v4().to_string();
+    let id = uuid::Uuid::new_v4().to_string();
     let workspace = LabeqWorkspace {
         id: id.clone(),
         name,
         ..Default::default()
     };
-
     update_state(&app, |state: &mut AppState| {
         state.workspaces.push(workspace);
     });
@@ -86,10 +66,22 @@ pub fn rename_workspace(app: AppHandle, workspace_id: String, new_name: String) 
 }
 
 #[tauri::command]
-pub fn add_device_to_workspace(app: AppHandle, workspace_id: String, device: LabeqDevice) {
+pub fn add_device_to_workspace(
+    app: AppHandle,
+    workspace_id: String,
+    connection_ref: String,
+    uuid: String,
+) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            workspace.devices.items.push(Item::Item(device));
+            if (!workspace.devices.items.iter().any(
+                |item| matches!(item, Item::Item((c, u)) if c == &connection_ref && u == &uuid),
+            )) {
+                workspace
+                    .devices
+                    .items
+                    .push(Item::Item((connection_ref, uuid)));
+            }
         }
     });
 }
@@ -98,7 +90,9 @@ pub fn add_device_to_workspace(app: AppHandle, workspace_id: String, device: Lab
 pub fn remove_device_from_workspace(app: AppHandle, workspace_id: String, device_id: String) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            remove_item_recursive(&mut workspace.devices.items, &device_id);
+            remove_item_recursive(&mut workspace.devices.items, |(_conn, uuid)| {
+                uuid == &device_id
+            });
         }
     });
 }
@@ -108,7 +102,7 @@ pub fn create_device_folder(
     app: AppHandle,
     workspace_id: String,
     parent_id: Option<String>,
-    folder_name: String
+    folder_name: String,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
@@ -117,13 +111,9 @@ pub fn create_device_folder(
                 name: folder_name,
                 items: vec![],
             };
-
-            if let Some(parent_id) = parent_id {
-                // Add to parent folder
-                add_folder_to_parent(&mut workspace.devices.items, &parent_id, new_folder);
-            } else {
-                // Add to root
-                workspace.devices.items.push(Item::Folder(new_folder));
+            match parent_id {
+                Some(pid) => add_folder_to_parent(&mut workspace.devices.items, &pid, new_folder),
+                None => workspace.devices.items.push(Item::Folder(new_folder)),
             }
         }
     });
@@ -134,7 +124,7 @@ pub fn rename_device_folder(
     app: AppHandle,
     workspace_id: String,
     folder_id: String,
-    new_name: String
+    new_name: String,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
@@ -157,19 +147,17 @@ pub fn move_device_to_folder(
     app: AppHandle,
     workspace_id: String,
     device_id: String,
-    folder_id: Option<String>
+    folder_id: Option<String>,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            let device = find_and_remove_device(&mut workspace.devices.items, &device_id);
-
+            let device = find_and_remove(&mut workspace.devices.items, |(_conn, uuid)| {
+                uuid == &device_id
+            });
             if let Some(device) = device {
-                if let Some(folder_id) = folder_id {
-                    // Add to specific folder
-                    add_device_to_folder(&mut workspace.devices.items, &folder_id, device);
-                } else {
-                    // Add to root
-                    workspace.devices.items.push(Item::Item(device));
+                match folder_id {
+                    Some(fid) => add_item_to_folder(&mut workspace.devices.items, &fid, device),
+                    None => workspace.devices.items.push(Item::Item(device)),
                 }
             }
         }
@@ -177,19 +165,30 @@ pub fn move_device_to_folder(
 }
 
 #[tauri::command]
-pub fn add_connection_to_workspace(app: AppHandle, workspace_id: String, connection: ConnectionData) {
+pub fn add_connection_to_workspace(app: AppHandle, workspace_id: String, connection_id: String) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            workspace.connections.items.push(Item::Item(connection));
+            if (!workspace
+                .connections
+                .items
+                .iter()
+                .any(|item| matches!(item, Item::Item(c) if c == &connection_id)))
+            {
+                workspace.connections.items.push(Item::Item(connection_id));
+            }
         }
     });
 }
 
 #[tauri::command]
-pub fn remove_connection_from_workspace(app: AppHandle, workspace_id: String, connection_id: String) {
+pub fn remove_connection_from_workspace(
+    app: AppHandle,
+    workspace_id: String,
+    connection_id: String,
+) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            remove_item_recursive(&mut workspace.connections.items, &connection_id);
+            remove_item_recursive(&mut workspace.connections.items, |id| id == &connection_id);
         }
     });
 }
@@ -199,7 +198,7 @@ pub fn create_connection_folder(
     app: AppHandle,
     workspace_id: String,
     parent_id: Option<String>,
-    folder_name: String
+    folder_name: String,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
@@ -208,11 +207,11 @@ pub fn create_connection_folder(
                 name: folder_name,
                 items: vec![],
             };
-
-            if let Some(parent_id) = parent_id {
-                add_folder_to_parent(&mut workspace.connections.items, &parent_id, new_folder);
-            } else {
-                workspace.connections.items.push(Item::Folder(new_folder));
+            match parent_id {
+                Some(pid) => {
+                    add_folder_to_parent(&mut workspace.connections.items, &pid, new_folder)
+                }
+                None => workspace.connections.items.push(Item::Folder(new_folder)),
             }
         }
     });
@@ -223,7 +222,7 @@ pub fn rename_connection_folder(
     app: AppHandle,
     workspace_id: String,
     folder_id: String,
-    new_name: String
+    new_name: String,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
@@ -246,60 +245,59 @@ pub fn move_connection_to_folder(
     app: AppHandle,
     workspace_id: String,
     connection_id: String,
-    folder_id: Option<String>
+    folder_id: Option<String>,
 ) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            let connection = find_and_remove_connection(&mut workspace.connections.items, &connection_id);
-
+            let connection =
+                find_and_remove(&mut workspace.connections.items, |id| id == &connection_id);
             if let Some(connection) = connection {
-                if let Some(folder_id) = folder_id {
-                    add_connection_to_folder(&mut workspace.connections.items, &folder_id, connection);
-                } else {
-                    workspace.connections.items.push(Item::Item(connection));
+                match folder_id {
+                    Some(fid) => {
+                        add_item_to_folder(&mut workspace.connections.items, &fid, connection)
+                    }
+                    None => workspace.connections.items.push(Item::Item(connection)),
                 }
             }
         }
     });
 }
 
-// Remove an item (by ID) recursively from the tree
-fn remove_item_recursive<T>(items: &mut Vec<Item<T>>, id: &str)
+// Remove all items matching `predicate` anywhere in the tree.
+fn remove_item_recursive<T, F>(items: &mut Vec<Item<T>>, predicate: F)
 where
-    T: HasId,
+    F: Fn(&T) -> bool + Copy,
 {
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
-            remove_item_recursive(&mut folder.items, id);
+            remove_item_recursive(&mut folder.items, predicate);
         }
     }
-
     items.retain(|item| match item {
-        Item::Item(data) => data.id() != id,
+        Item::Item(data) => !predicate(data),
         Item::Folder(_) => true,
     });
 }
 
-// Remove a folder (by ID) recursively from the tree
+// Remove a folder by ID anywhere in the tree.
 fn remove_folder_recursive<T>(items: &mut Vec<Item<T>>, folder_id: &str) {
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
             remove_folder_recursive(&mut folder.items, folder_id);
         }
     }
-
     items.retain(|item| match item {
         Item::Folder(folder) => folder.id != folder_id,
         Item::Item(_) => true,
     });
 }
 
-// Rename a folder (by ID) recursively in the tree
+// Rename a folder by ID anywhere in the tree.
 fn rename_folder_recursive<T>(items: &mut Vec<Item<T>>, folder_id: &str, new_name: String) {
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
             if folder.id == folder_id {
-                folder.name = new_name.clone();
+                folder.name = new_name;
                 return;
             }
             rename_folder_recursive(&mut folder.items, folder_id, new_name.clone());
@@ -307,8 +305,12 @@ fn rename_folder_recursive<T>(items: &mut Vec<Item<T>>, folder_id: &str, new_nam
     }
 }
 
-// Add a new folder to a parent folder
-fn add_folder_to_parent<T: Clone>(items: &mut Vec<Item<T>>, parent_id: &str, new_folder: NestedFolder<T>) {
+// Add a new sub-folder inside the folder matching `parent_id`.
+fn add_folder_to_parent<T: Clone>(
+    items: &mut Vec<Item<T>>,
+    parent_id: &str,
+    new_folder: NestedFolder<T>,
+) {
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
             if folder.id == parent_id {
@@ -320,84 +322,38 @@ fn add_folder_to_parent<T: Clone>(items: &mut Vec<Item<T>>, parent_id: &str, new
     }
 }
 
-// Find and remove a device from the tree, returning it if found
-fn find_and_remove_device(items: &mut Vec<Item<LabeqDevice>>, device_id: &str) -> Option<LabeqDevice> {
-    let index_to_remove = items.iter().position(|item| {
-        if let Item::Item(device) = item {
-            device.id() == device_id
-        } else {
-            false
-        }
-    });
-
-    if let Some(index) = index_to_remove {
-        if let Item::Item(device) = items.remove(index) {
-            return Some(device);
-        }
-    }
-
-    for item in items.iter_mut() {
-        if let Item::Folder(folder) = item {
-            if let Some(device) = find_and_remove_device(&mut folder.items, device_id) {
-                return Some(device);
-            }
-        }
-    }
-
-    None
-}
-
-// Add a device to a specific folder
-fn add_device_to_folder(items: &mut Vec<Item<LabeqDevice>>, folder_id: &str, device: LabeqDevice) {
-    for item in items.iter_mut() {
-        if let Item::Folder(folder) = item {
-            if folder.id == folder_id {
-                folder.items.push(Item::Item(device));
-                return;
-            }
-            add_device_to_folder(&mut folder.items, folder_id, device.clone());
-        }
-    }
-}
-
-// Find and remove a connection from the tree, returning it if found
-fn find_and_remove_connection(items: &mut Vec<Item<ConnectionData>>, connection_id: &str) -> Option<ConnectionData> {
-    let found_index = items
+// Find and remove the first item matching `predicate`, returning it.
+fn find_and_remove<T, F>(items: &mut Vec<Item<T>>, predicate: F) -> Option<T>
+where
+    F: Fn(&T) -> bool + Copy,
+{
+    if let Some(index) = items
         .iter()
-        .position(|item| {
-            if let Item::Item(connection) = item {
-                connection.id() == connection_id
-            } else {
-                false
-            }
-        });
-
-    if let Some(i) = found_index {
-        if let Item::Item(connection) = items.remove(i) {
-            return Some(connection);
+        .position(|item| matches!(item, Item::Item(v) if predicate(v)))
+    {
+        if let Item::Item(value) = items.remove(index) {
+            return Some(value);
         }
     }
-
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
-            if let Some(connection) = find_and_remove_connection(&mut folder.items, connection_id) {
-                return Some(connection);
+            if let Some(found) = find_and_remove(&mut folder.items, predicate) {
+                return Some(found);
             }
         }
     }
-
     None
 }
 
-// Add a connection to a specific folder
-fn add_connection_to_folder(items: &mut [Item<ConnectionData>], folder_id: &str, connection: ConnectionData) {
+// Add an item inside the folder matching `folder_id`.
+fn add_item_to_folder<T: Clone>(items: &mut Vec<Item<T>>, folder_id: &str, value: T) {
     for item in items.iter_mut() {
         if let Item::Folder(folder) = item {
             if folder.id == folder_id {
-                folder.items.push(Item::Item(connection));
+                folder.items.push(Item::Item(value));
                 return;
             }
-            add_connection_to_folder(&mut folder.items, folder_id, connection.clone());
+            add_item_to_folder(&mut folder.items, folder_id, value.clone());
         }
     }
 }
