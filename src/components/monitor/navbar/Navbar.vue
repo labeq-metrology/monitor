@@ -10,7 +10,7 @@ const mode = useColorMode()
 </script>
 
 <template>
-  <Menubar>
+  <Menubar class="h-9 border-l-0">
     <SidebarTrigger/>
     <Button variant="ghost" @click="mode == 'light' ? mode = 'dark' : mode = 'light'">
       <Icon v-if="mode == 'dark'" icon="heroicons-outline:sun"/>

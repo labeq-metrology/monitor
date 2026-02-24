@@ -12,13 +12,13 @@ const router = useRouter();
 
 <template>
   <Sidebar variant="sidebar">
-    <SidebarHeader @click="router.push('/')" class="cursor-pointer">
-      <div class="px-2 text-muted-foreground text-sm">
-        <h1>LabEq Monitor v0.0.1 <span class="bg-destructive text-foreground px-1 ml-1 font-semibold">ALPHA</span></h1>
+    <SidebarHeader @click="router.push('/')" class="cursor-pointer border-border h-9 border-y-1">
+      <div class="px-2 text-foreground font-bold tracking-wider text-sm">
+        <h1>LabEq Monitor</h1>
       </div>
     </SidebarHeader>
     <SidebarContent>
-      <ScrollArea class="h-full w-full border-t border-b">
+      <ScrollArea class="h-full w-full border-b">
         <ScrollBar orientation="vertical" />
         <Collapsible defaultOpen class="group">
           <SidebarGroup>
@@ -28,8 +28,10 @@ const router = useRouter();
         </Collapsible>
       </ScrollArea>
     </SidebarContent>
-    <SidebarFooter>
-      s
+    <SidebarFooter class="flex flex-row gap-2 text-sm">
+      <span class="text-muted-foreground">Version</span>
+      <span class="capitalize font-semibold bg-gradient-to-r from-blue-800 to-blue-950/50 text-zinc-50 px-2 rounded-xl">beta</span>
+      <span>0.0.1</span>
     </SidebarFooter>
   </Sidebar>
 </template>

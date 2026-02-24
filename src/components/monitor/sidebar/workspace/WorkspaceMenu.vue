@@ -25,7 +25,7 @@
       </SidebarGroupLabel>
     <CollapsibleContent>
       <SidebarMenu>
-        <div class="text-muted-foreground text-xs mx-2 px-2 py-2 rounded-md bg-background" v-if="!workspacesPresent && !isCreating">
+        <div class="text-muted-foreground text-xs px-3 py-2 rounded-md bg-background cursor-default select-none" v-if="!workspacesPresent && !isCreating">
           <p>No workspaces present...</p>
         </div>
 
