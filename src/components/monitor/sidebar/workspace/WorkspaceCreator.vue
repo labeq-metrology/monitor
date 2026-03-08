@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-background rounded-md py-1 px-2">
+  <div class="bg-background rounded-md px-2">
     <CollapsibleTrigger
-        class="group/workspace transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md align-text-top">
-      <div class="flex items-end space-x-2 w-full">
+        class="h-9 min-h-9 max-h-9 group/workspace transition-colors duration-75 cursor-pointer w-full px-2 py-2 rounded-md">
+      <div class="flex items-center space-x-2 w-full">
         <Icon
             icon="heroicons:chevron-down"
-            class="text-lg self-end transition-transform duration-300 text-accent-foreground -ml-2"
+            class="text-lg items-center transition-transform duration-300 text-accent-foreground -ml-2"
             width="16"
             height="16"
         />
@@ -22,7 +22,7 @@
             @click.stop
             placeholder="Workspace name..."
             class="
-            self-end text-xs font-normal tracking-wide
+            py-0 items-center text-xs font-normal tracking-wide
             text-left max-w-8/12
             bg-background border border-border rounded
             focus:outline-none focus:ring-1 focus:ring-ring

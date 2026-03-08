@@ -26,6 +26,7 @@ export const useConnectionStore = defineStore('connections', () => {
         for (const key of connections.keys()) {
             if (!ids.has(key)) connections.delete(key);
         }
+        console.log(e.payload.connections)
         e.payload.connections.forEach(connection => connections.set(connection.id, connection));
     })
 

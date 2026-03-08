@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -26,6 +27,30 @@ pub struct ConnectionData {
     pub devices: Vec<LabeqDevice>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParameterInfo {
+    pub param_type: String,
+    pub value: ParameterValue
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(tag = "paramType", content = "value")]
+pub enum ParameterValue {
+    StringValue(String),
+    IntegerValue(i64),
+    DoubleValue(f64),
+    BytesValue(Vec<u8>),
+    IntegerArrayValue(Vec<i64>),
+    DoubleArrayValue(Vec<f64>)
+}
+
+impl Default for ParameterValue {
+    fn default() -> Self {
+        ParameterValue::StringValue(String::new())
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct LabeqDevice {
@@ -37,6 +62,7 @@ pub struct LabeqDevice {
     pub tags: Vec<String>,
     #[serde(default)]
     pub connection_ref: String,
+    pub parameters: HashMap<String, ParameterValue>
 }
 
 #[tauri::command]

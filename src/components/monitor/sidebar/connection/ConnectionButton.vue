@@ -1,8 +1,8 @@
 <template>
-  <CollapsibleTrigger class="group/connection transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md">
+  <CollapsibleTrigger class="h-9 min-h-9 max-h-9 group/connection transition-colors duration-75 cursor-pointer w-full px-4 py-2 rounded-md">
     <ContextMenu>
       <ContextMenuTrigger asChild class="text-sm text-accent-background">
-        <div class="flex items-center space-x-2 w-full ">
+        <div class="flex items-center space-x-2 w-full">
           <Icon
               icon="heroicons:chevron-down"
               class="text-lg self-end transition-transform duration-300 group-data-[state=closed]/collapsible:rotate-180 -ml-2 text-accent-foreground"

@@ -27,16 +27,16 @@
                      v-for="connection in connectionStore.connections.values()"
                      :key="connection.id"
                      class="group/collapsible">
-          <SidebarGroup class="py-1 bg-background rounded-md">
+          <SidebarGroup class="bg-background rounded-md p-0">
             <SidebarGroupLabel asChild>
               <ConnectionButton :connection="connection"/>
             </SidebarGroupLabel>
             <CollapsibleContent
-                class="mx-2 mb-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
+                class="mx-4 mb-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
               <TooltipProvider v-for="device in connection.devices" :key="device.uuid">
                 <TooltipRoot :delayDuration="5000">
                   <TooltipTrigger asChild class="mx-2 w-full">
-                    <SidebarMenuSubButton class="select-none cursor-pointer"
+                    <SidebarMenuSubButton class="select-none cursor-pointer hover:bg-accent/50"
                                           @click.prevent="router.push({
                               name: 'device',
                               params: { connectionId: connection.id, id: device.uuid }
@@ -54,9 +54,9 @@
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
-        <div class="text-muted-foreground text-xs mx-2 px-2 py-2 rounded-md bg-background" v-else>
-          <p>No connections present...</p>
-        </div>
+        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-background cursor-default select-none" v-else>
+          <EmptyHeader>No connections present...</EmptyHeader>
+        </Empty>
       </SidebarMenu>
     </CollapsibleContent>
   </Collapsible>
@@ -73,6 +73,7 @@ import {useConnectionStore} from "@/store/connection.store.ts";
 import {useRouter} from "vue-router";
 import {TooltipRoot} from "reka-ui";
 import {CollapsibleTrigger} from "@/components/ui/collapsible";
+import {Empty, EmptyHeader} from "@/components/ui/empty";
 
 const connectionStore = useConnectionStore();
 const router = useRouter();

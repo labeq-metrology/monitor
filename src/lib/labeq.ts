@@ -3,6 +3,13 @@ export interface AppState {
     workspaces: LabeqWorkspace[];
 }
 
+export type ParameterValue = string | number | number[];
+
+export interface ParameterInfo {
+    paramType: string,
+    value: ParameterValue
+}
+
 export interface LabeqDevice {
     uuid: string;
     name: string;
@@ -10,6 +17,7 @@ export interface LabeqDevice {
     manufacturer: string;
     driver: string;
     tags: string[];
+    parameters: Record<string, ParameterInfo>
 }
 
 export interface LabeqConnection {
@@ -47,11 +55,11 @@ export interface LabeqWorkspace {
 export interface ReadRequestResponse {
     request: string;
     parameter: string;
-    resolvedValue?: string;
+    resolvedValue?: ParameterInfo;
     error?: string;
 }
 
 export interface UpdateMessage {
-    newValue: string;
+    newValue: ParameterInfo;
     error?: string;
 }

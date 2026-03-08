@@ -1,13 +1,16 @@
-use crate::state::connection::{ConnectionState, LabeqDevice};
-use crate::state::{connection::ConnectionData, update_state, AppState};
+mod handler;
+
+use crate::state::connection::{ConnectionState, LabeqDevice, ParameterInfo};
+use crate::state::{connection::ConnectionData, get_state, update_state, AppState};
 use lazy_static::lazy_static;
 use rumqttc::{AsyncClient, ClientError, Event, MqttOptions, Packet, Publish, QoS};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, Url};
+use tauri::{AppHandle, Emitter, Url};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use crate::mqtt::handler::handle_publish;
 
 struct ConnectionHandle {
     client: Option<AsyncClient>,
@@ -70,8 +73,7 @@ pub async fn test_connection(
     username: String,
     password: String,
 ) -> Result<bool, String> {
-    let parsed_url = Url::parse(&url)
-        .map_err(|e| format!("Invalid URL: {e}"))?;
+    let parsed_url = Url::parse(&url).map_err(|e| format!("Invalid URL: {e}"))?;
     let use_tls = parsed_url.scheme() == "mqtts";
     let host = parsed_url
         .host_str()
@@ -108,7 +110,7 @@ pub async fn test_connection(
             }
         }
     })
-        .await;
+    .await;
 
     timeout.unwrap_or_else(|_| Err("Connection timeout".to_string()))
 }
@@ -165,8 +167,8 @@ pub async fn connection_activate(app: AppHandle, conn_id: String) -> Result<(), 
             .clone()
     };
 
-    let parsed_url = Url::parse(&connection_data.mqtt_url)
-        .map_err(|e| format!("Invalid URL: {e}"))?;
+    let parsed_url =
+        Url::parse(&connection_data.mqtt_url).map_err(|e| format!("Invalid URL: {e}"))?;
     let use_tls = parsed_url.scheme() == "mqtts";
     let host = parsed_url
         .host_str()
@@ -215,7 +217,8 @@ pub async fn connection_deactivate(app: AppHandle, conn_id: String) -> Result<()
 }
 
 async fn internal_deactivate(app: &AppHandle, conn_id: &str) -> Result<(), String> {
-    { // Internal block for RwLock release
+    {
+        // Internal block for RwLock release
         let mut clients = MQTT_CLIENTS.write().await;
         if let Some(handle) = clients.get_mut(conn_id) {
             if let Some(task) = handle.task.take() {
@@ -257,7 +260,9 @@ pub async fn gateway_publish(
             .ok_or_else(|| "Connection not found".to_string())?;
 
         let is_connected = *connection.connected.read().await;
-        let client = connection.client.clone()
+        let client = connection
+            .client
+            .clone()
             .ok_or_else(|| "Connection not active".to_string())?;
 
         (client, is_connected)
@@ -362,6 +367,53 @@ pub async fn update_devices(app: AppHandle, conn_id: &str) -> Result<Vec<LabeqDe
     Ok(devices)
 }
 
+#[tauri::command]
+pub async fn update_device_parameters(
+    app: AppHandle,
+    conn_id: &str,
+    device_id: &str,
+) -> Result<LabeqDevice, ()> {
+    let connection: Option<ConnectionData> = get_state(app.clone())
+        .connections
+        .iter()
+        .find(|c| c.id == conn_id)
+        .cloned();
+
+    if let Some(connection) = connection {
+        let api_url = connection.api_url;
+
+        let device_with_params = reqwest::get(format!("{}/devices/{id}", api_url, id = device_id))
+            .await
+            .map_err(|_| ())?
+            .json::<LabeqDevice>()
+            .await
+            .map_err(|_| ())?;
+
+        let connections = {
+            let mut clients = MQTT_CLIENTS.write().await;
+            let connection = clients.get_mut(conn_id).ok_or(())?;
+
+            if let Some(device) = connection
+                .connection
+                .devices
+                .iter_mut()
+                .find(|d| d.uuid == device_id)
+            {
+                *device = device_with_params.clone();
+            }
+
+            clients.values().map(|c| c.connection.clone()).collect()
+        };
+
+        update_state(&app, |state| {
+            state.connections = connections;
+        });
+
+        return Ok(device_with_params)
+    }
+    Err(())
+}
+
 fn spawn_event_loop(
     app: AppHandle,
     conn_id: String,
@@ -375,7 +427,9 @@ fn spawn_event_loop(
                     emit_event(&app, &conn_id, PayloadEvent::Connect);
                 }
                 Ok(Event::Incoming(Packet::Publish(p))) => {
-                    emit_event(&app, &conn_id, PayloadEvent::Message(MqttPublish::from(p)));
+                    let packet = MqttPublish::from(p);
+                    emit_event(&app, &conn_id, PayloadEvent::Message(packet.clone()));
+                    handle_publish(&app, &conn_id, packet)
                 }
                 Err(e) => {
                     eprintln!("MQTT connection error [{conn_id}]: [{e}]");

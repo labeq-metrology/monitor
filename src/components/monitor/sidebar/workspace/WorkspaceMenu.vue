@@ -25,9 +25,9 @@
       </SidebarGroupLabel>
     <CollapsibleContent>
       <SidebarMenu>
-        <div class="text-muted-foreground text-xs px-3 py-2 rounded-md bg-background cursor-default select-none" v-if="!workspacesPresent && !isCreating">
-          <p>No workspaces present...</p>
-        </div>
+        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-background cursor-default select-none" v-if="!workspacesPresent && !isCreating">
+          <EmptyHeader>No workspaces present...</EmptyHeader>
+        </Empty>
 
         <Collapsible
             v-if="isCreating"
@@ -69,6 +69,7 @@ import {computed, ref} from "vue";
 import type {LabeqWorkspace} from "@/lib/labeq.ts";
 import WorkspaceCreator from "@/components/monitor/sidebar/workspace/WorkspaceCreator.vue";
 import WorkspaceItem from "@/components/monitor/sidebar/workspace/WorkspaceItem.vue";
+import {Empty, EmptyHeader} from "@/components/ui/empty";
 
 const workspacesPresent = computed(() => workspaceStore.workspaces.size > 0);
 const workspaceStore = useWorkspaceStore();

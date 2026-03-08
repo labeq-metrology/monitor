@@ -13,7 +13,7 @@ const router = useRouter();
 </script>
 
 <template>
-  <SidebarMenuSubButton class="select-none cursor-pointer"
+  <SidebarMenuSubButton class="select-none cursor-pointer hover:bg-accent/50 transition-colors"
                         @click.prevent="router.push({
                               name: 'device',
                               params: { connectionId: connection.id, id: device.uuid }

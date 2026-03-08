@@ -25,12 +25,23 @@
                   @click.prevent="autoupdate = !autoupdate">
             <Icon v-if="autoupdate" icon="heroicons:bolt" width="24" height="24"/>
             <Icon v-else icon="heroicons:bolt-slash" width="24" height="24"/>
-            <p>Auto-update: {{ autoupdate ? 'on' : 'off' }}</p>
+            <p>Auto-update</p>
+          </Button>
+        </li>
+        <li>
+          <Button :variant="'ghost'" class="h-6 mx-1" style="padding: 0"
+                  @click.prevent="router.push({
+                              name: 'device-terminal',
+                              params: { connectionId: route.params.connectionId as string, id: device?.uuid }
+                            })"
+          >
+            <Icon icon="heroicons:command-line" class="scale-150 px-0 mx-0" width="24" height="24"/>
           </Button>
         </li>
       </ul>
     </header>
     <Separator class="mt-2 mb-2"/>
+    {{ device?.parameters }}
     <article
         class="grid"
         :style="{
@@ -93,7 +104,7 @@ import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Icon} from "@iconify/vue";
-import {ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
+import {ParameterValue, ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
 import {listen} from "@tauri-apps/api/event";
 import usePlugin from "@/composables/usePlugin.ts";
 import useDevice from "@/composables/useDevice.ts";
@@ -112,7 +123,7 @@ provide('plugin', plugin);
 const autoupdate = ref(true);
 const refreshing = computed(() => activeReadRequests.size > 0);
 
-const parameters = reactive<Record<string, string>>({});
+const parameters = reactive<Record<string, ParameterValue>>({});
 const errors = reactive<Record<string, string>>({});
 
 const activeReadRequests = reactive<Map<string, string>>(new Map());
@@ -143,7 +154,7 @@ const handleRequest = (match: RegExpExecArray, e: any) => {
     errors[parsedResponse.parameter] = parsedResponse.error;
     return;
   }
-  parameters[parsedResponse.parameter] = parsedResponse.resolvedValue!!;
+  parameters[parsedResponse.parameter] = parsedResponse.resolvedValue?.value!!;
   delete errors[parsedResponse.parameter];
 };
 
@@ -154,12 +165,13 @@ const handleUpdate = (match: RegExpExecArray, e: any) => {
     errors[match.groups.parameter] = parsedResponse.error;
     return;
   }
-  parameters[match.groups.parameter] = parsedResponse.newValue!!;
+  parameters[match.groups.parameter] = parsedResponse.newValue.value!!;
   delete errors[match.groups.parameter];
 };
 
 onMounted(async () => {
   if (!device.value) return;
+  invoke('update_device_parameters', { connId: route.params.connectionId, deviceId: device.value.uuid});
 
   layout.value = await invoke<LayoutSchema>('load_layout', {
     driver: device.value.driver,
@@ -182,7 +194,7 @@ const refreshParameters = async () => {
                   topic: `device/${device.value!!.uuid}/parameters/${panel.parameter}/read`,
                   payload: JSON.stringify({
                     requestId: uuid,
-                    returnType: 'string'
+                    returnType: 'same_as_input'
                   }),
                   retain: false
                 });

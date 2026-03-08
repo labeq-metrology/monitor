@@ -21,13 +21,14 @@ import VisualModelContainer from "@/components/monitor/device/panels/VisualModel
 import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
 import {invoke} from "@tauri-apps/api/core";
 import useDevice from "@/composables/useDevice.ts";
+import {ParameterValue} from "@/lib/labeq.ts";
 
 const props = defineProps<{
   definition: LayoutPanel,
   refreshing: boolean,
 }>();
 
-const data = defineModel<string>('data');
+const data = defineModel<ParameterValue>('data');
 const error = defineModel<string>('error');
 
 const basicPanels = {

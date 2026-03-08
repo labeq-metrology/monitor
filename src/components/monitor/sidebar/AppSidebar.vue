@@ -28,9 +28,8 @@ const router = useRouter();
         </Collapsible>
       </ScrollArea>
     </SidebarContent>
-    <SidebarFooter class="flex flex-row gap-2 text-sm">
-      <span class="text-muted-foreground">Version</span>
-      <span class="capitalize font-semibold bg-gradient-to-r from-blue-800 to-blue-950/50 text-zinc-50 px-2 rounded-xl">beta</span>
+    <SidebarFooter class="flex flex-row text-sm bg-gradient-to-r from-blue-800 to-blue-950/50">
+      <span class="uppercase font-semibold text-zinc-50 rounded-xl">beta</span>
       <span>0.0.1</span>
     </SidebarFooter>
   </Sidebar>
