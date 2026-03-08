@@ -41,7 +41,6 @@
       </ul>
     </header>
     <Separator class="mt-2 mb-2"/>
-    {{ device?.parameters }}
     <article
         class="grid"
         :style="{
