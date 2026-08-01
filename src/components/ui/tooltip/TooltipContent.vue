@@ -6,16 +6,16 @@ import { cn } from '@/lib/utils'
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
 const props = withDefaults(defineProps<TooltipContentProps & { class?: HTMLAttributes['class'] }>(), {
   sideOffset: 4,
-})
+});
 
-const emits = defineEmits<TooltipContentEmits>()
+const emits = defineEmits<TooltipContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const delegatedProps = reactiveOmit(props, 'class');
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

@@ -9,11 +9,11 @@ import {invoke} from "@tauri-apps/api/core";
 import {onMounted} from "vue";
 import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
 
-const modelStore = useVisualModelsStore()
+const modelStore = useVisualModelsStore();
 
-modelStore.autoDiscoverModels()
+modelStore.autoDiscoverModels();
 
 onMounted(async () => {
-  invoke<string>('list_plugins').then((d: string) => console.log(JSON.parse(d))).catch(console.error)
+  invoke<string>('list_plugins').then((d: string) => console.log(JSON.parse(d))).catch(console.error);
 });
 </script>

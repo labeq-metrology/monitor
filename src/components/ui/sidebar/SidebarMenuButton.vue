@@ -7,7 +7,7 @@ import { useSidebar } from './utils'
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
 const props = withDefaults(defineProps<SidebarMenuButtonProps & {
   tooltip?: string | Component
@@ -15,11 +15,11 @@ const props = withDefaults(defineProps<SidebarMenuButtonProps & {
   as: 'button',
   variant: 'default',
   size: 'default',
-})
+});
 
-const { isMobile, state } = useSidebar()
+const { isMobile, state } = useSidebar();
 
-const delegatedProps = reactiveOmit(props, 'tooltip')
+const delegatedProps = reactiveOmit(props, 'tooltip');
 </script>
 
 <template>

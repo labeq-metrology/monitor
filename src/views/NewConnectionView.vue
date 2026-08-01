@@ -19,7 +19,7 @@ enum ConnectionCheck {
   ERROR,
 }
 
-const connectionCheck = ref<ConnectionCheck>(ConnectionCheck.IDLE)
+const connectionCheck = ref<ConnectionCheck>(ConnectionCheck.IDLE);
 
 const router = useRouter();
 const formSchema = toTypedSchema(z.object({
@@ -43,7 +43,7 @@ const form = useForm({
   }
 });
 
-const connectionStore = useConnectionStore()
+const connectionStore = useConnectionStore();
 const onSubmit = form.handleSubmit(values => {
   invoke('create_connection', {
     url: values.mqttUrl,

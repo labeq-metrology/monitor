@@ -15,12 +15,12 @@ const props = withDefaults(
   {
     sideOffset: 4,
   },
-)
-const emits = defineEmits<DropdownMenuContentEmits>()
+);
+const emits = defineEmits<DropdownMenuContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

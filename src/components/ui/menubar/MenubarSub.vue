@@ -6,10 +6,10 @@ interface MenubarSubRootProps {
   open?: boolean
 }
 
-const props = defineProps<MenubarSubRootProps>()
-const emits = defineEmits<MenubarSubEmits>()
+const props = defineProps<MenubarSubRootProps>();
+const emits = defineEmits<MenubarSubEmits>();
 
-const forwarded = useForwardPropsEmits(props, emits)
+const forwarded = useForwardPropsEmits(props, emits);
 </script>
 
 <template>

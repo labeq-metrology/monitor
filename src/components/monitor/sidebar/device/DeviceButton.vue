@@ -3,6 +3,7 @@ import {Icon} from "@iconify/vue";
 import {SidebarMenuSubButton} from "@/components/ui/sidebar";
 import {useRouter} from "vue-router";
 import {LabeqConnection, LabeqDevice} from "@/lib/labeq.ts";
+import {useDragSource} from "@/composables/useDrag.ts";
 
 defineProps<{
   device: LabeqDevice,
@@ -10,20 +11,18 @@ defineProps<{
 }>();
 
 const router = useRouter();
+const { startDrag } = useDragSource();
 </script>
 
 <template>
-  <SidebarMenuSubButton class="select-none cursor-pointer hover:bg-accent/50 transition-colors"
-                        @click.prevent="router.push({
-                              name: 'device',
-                              params: { connectionId: connection.id, id: device.uuid }
-                            })"
+  <div
+      class="select-none touch-none"
+      @pointerdown="startDrag('device', device.uuid, device.name, $event)"
+      @click="router.push({ name: 'device', params: { connectionId: connection.id, id: device.uuid } })"
   >
-    <Icon icon="heroicons:cpu-chip-20-solid"/>
-    <span class="text-xs">{{ device.name }}</span>
-  </SidebarMenuSubButton>
+    <SidebarMenuSubButton class="cursor-grab hover:bg-accent/50 transition-colors">
+      <Icon icon="heroicons:cpu-chip-20-solid"/>
+      <span class="text-xs">{{ device.name }}</span>
+    </SidebarMenuSubButton>
+  </div>
 </template>
-
-<style scoped lang="scss">
-
-</style>

@@ -2,7 +2,7 @@
 import type { PopoverAnchorProps } from 'reka-ui'
 import { PopoverAnchor } from 'reka-ui'
 
-const props = defineProps<PopoverAnchorProps>()
+const props = defineProps<PopoverAnchorProps>();
 </script>
 
 <template>

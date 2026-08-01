@@ -15,20 +15,20 @@ import {Input} from "@/components/ui/input";
 const props = defineProps<{
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-}>()
+}>();
 
 const table = useVueTable({
   get data() {
-    return props.data
+    return props.data;
   },
   get columns() {
-    return props.columns
+    return props.columns;
   },
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   globalFilterFn: 'includesString'
-})
+});
 </script>
 
 <template>

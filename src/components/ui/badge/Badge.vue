@@ -10,9 +10,9 @@ import { badgeVariants } from "."
 const props = defineProps<PrimitiveProps & {
   variant?: BadgeVariants["variant"]
   class?: HTMLAttributes["class"]
-}>()
+}>();
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class");
 </script>
 
 <template>

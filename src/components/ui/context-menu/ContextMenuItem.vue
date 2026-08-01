@@ -14,12 +14,12 @@ const props = withDefaults(defineProps<ContextMenuItemProps & {
   variant?: "default" | "destructive"
 }>(), {
   variant: "default",
-})
-const emits = defineEmits<ContextMenuItemEmits>()
+});
+const emits = defineEmits<ContextMenuItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class");
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

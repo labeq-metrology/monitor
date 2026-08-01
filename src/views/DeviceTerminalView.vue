@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import {useRoute, useRouter} from "vue-router";
+import {useRoute} from "vue-router";
 import useDevice from "@/composables/useDevice.ts";
 import usePlugin from "@/composables/usePlugin.ts";
 import {computed, ref} from "vue";
-import {LayoutSchema} from "@/lib/plugin.ts";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {Table, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+import {Button} from "@/components/ui/button";
+import {Icon} from "@iconify/vue";
+import useDeviceParameters from "@/composables/useDeviceParameters.ts";
 
 const route = useRoute();
 
 const device = useDevice();
+const {
+  parameters,
+  readParameter,
+  activeReadRequests,
+} = useDeviceParameters(device, ref(null));
 const connectionStore = useConnectionStore();
 const connection = computed(() => connectionStore.connections.get(route.params.connectionId as string));
 
@@ -80,16 +87,27 @@ let plugin = usePlugin(device.value!!);
         <Table class="text-xs w-full ">
           <TableHeader>
             <TableRow>
+              <TableHead class="lg:block hidden" />
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Value</TableHead>
             </TableRow>
           </TableHeader>
-          <template v-for="[name, parameter] in Object.entries(device?.parameters ?? {}).sort()">
+          <template v-for="[name, parameter] in Object.entries(parameters).sort()">
             <TableRow>
+              <TableCell class="w-20 lg:block hidden">
+                <div class="flex">
+                  <Button @click.prevent="readParameter(name)" variant="link" class="p-0 w-8 h-fit">
+                    <Icon icon="heroicons:arrow-path" width="24" height="24" />
+                  </Button>
+                  <Button variant="link" class="p-0 w-8 h-fit" v-if="parameter">
+                    <Icon icon="heroicons:pencil" width="24" height="24" />
+                  </Button>
+                </div>
+              </TableCell>
               <TableCell class="text-muted-foreground">{{ name }}</TableCell>
               <TableCell>{{ parameter.paramType }}</TableCell>
-              <TableCell>{{ parameter.value }}</TableCell>
+              <TableCell :class="Array.from(activeReadRequests.values()).includes(name) ? 'animate-pulse' : ''">{{ parameter.value }}</TableCell>
             </TableRow>
           </template>
         </Table>

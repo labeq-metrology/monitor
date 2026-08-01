@@ -12,46 +12,46 @@ const props = withDefaults(defineProps<{
 }>(), {
   defaultOpen: true,
   open: undefined,
-})
+});
 
 const emits = defineEmits<{
   'update:open': [open: boolean]
-}>()
+}>();
 
-const isMobile = useMediaQuery('(max-width: 768px)')
-const openMobile = ref(false)
+const isMobile = useMediaQuery('(max-width: 768px)');
+const openMobile = ref(false);
 
 const open = useVModel(props, 'open', emits, {
   defaultValue: props.defaultOpen ?? false,
   passive: (props.open === undefined) as false,
-}) as Ref<boolean>
+}) as Ref<boolean>;
 
 function setOpen(value: boolean) {
-  open.value = value // emits('update:open', value)
+  open.value = value; // emits('update:open', value)
 
   // This sets the cookie to keep the sidebar state.
-  document.cookie = `${SIDEBAR_COOKIE_NAME}=${open.value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+  document.cookie = `${SIDEBAR_COOKIE_NAME}=${open.value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 }
 
 function setOpenMobile(value: boolean) {
-  openMobile.value = value
+  openMobile.value = value;
 }
 
 // Helper to toggle the sidebar.
 function toggleSidebar() {
-  return isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value)
+  return isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value);
 }
 
 useEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault()
-    toggleSidebar()
+    event.preventDefault();
+    toggleSidebar();
   }
-})
+});
 
 // We add a state so that we can do data-state="expanded" or "collapsed".
 // This makes it easier to style the sidebar with Tailwind classes.
-const state = computed(() => open.value ? 'expanded' : 'collapsed')
+const state = computed(() => open.value ? 'expanded' : 'collapsed');
 
 provideSidebarContext({
   state,
@@ -61,7 +61,7 @@ provideSidebarContext({
   openMobile,
   setOpenMobile,
   toggleSidebar,
-})
+});
 </script>
 
 <template>

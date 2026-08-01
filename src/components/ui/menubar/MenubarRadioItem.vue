@@ -11,12 +11,12 @@ import {
 } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<MenubarRadioItemProps & { class?: HTMLAttributes['class'] }>()
-const emits = defineEmits<MenubarRadioItemEmits>()
+const props = defineProps<MenubarRadioItemProps & { class?: HTMLAttributes['class'] }>();
+const emits = defineEmits<MenubarRadioItemEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

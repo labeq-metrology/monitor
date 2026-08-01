@@ -79,7 +79,7 @@ const handlePanelUpdate = async (newVal: string) => {
   if (isSettingFormattedValue) return;
   if (newVal === data.value) return;
 
-  console.log('newVal', newVal)
+  console.log('newVal', newVal);
   const result = await invoke<string>('format_panel_to_param', {
     driver: device.value.driver,
     variant: device.value.model,

@@ -30,7 +30,7 @@ const allConnections = computed(() => {
     );
   };
   if (!workspace.value) return [];
-  else return flatten(workspace.value.connections.items)
+  else return flatten(workspace.value.connections.items);
 });
 
 const availableConnections = computed(() => {

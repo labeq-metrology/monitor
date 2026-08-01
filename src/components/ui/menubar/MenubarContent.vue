@@ -16,11 +16,11 @@ const props = withDefaults(
     alignOffset: -4,
     sideOffset: 8,
   },
-)
+);
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwardedProps = useForwardProps(delegatedProps)
+const forwardedProps = useForwardProps(delegatedProps);
 </script>
 
 <template>

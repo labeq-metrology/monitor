@@ -9,12 +9,12 @@ import {
 } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<DropdownMenuSubContentProps & { class?: HTMLAttributes['class'] }>()
-const emits = defineEmits<DropdownMenuSubContentEmits>()
+const props = defineProps<DropdownMenuSubContentProps & { class?: HTMLAttributes['class'] }>();
+const emits = defineEmits<DropdownMenuSubContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

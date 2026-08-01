@@ -11,12 +11,12 @@ import {
 } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<MenubarCheckboxItemProps & { class?: HTMLAttributes['class'] }>()
-const emits = defineEmits<MenubarCheckboxItemEmits>()
+const props = defineProps<MenubarCheckboxItemProps & { class?: HTMLAttributes['class'] }>();
+const emits = defineEmits<MenubarCheckboxItemEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

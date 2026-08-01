@@ -5,9 +5,9 @@ import { useSidebar } from './utils'
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
-}>()
+}>();
 
-const { toggleSidebar } = useSidebar()
+const { toggleSidebar } = useSidebar();
 </script>
 
 <template>

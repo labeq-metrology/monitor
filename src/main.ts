@@ -17,7 +17,22 @@ const routes: RouteRecordRaw[] = [
     {path: "/", component: WelcomeView},
     {path: "/new-connection", component: NewConnectionView},
     {
-        path: "/:connectionId/devices/:id",
+        path: "/connection/:connectionId",
+        name: "connection",
+        component: () => import("@/views/ConnectionView.vue"),
+        beforeEnter: (to) => {
+            const connections = useConnectionStore();
+
+            if (!connections.connections.has(to.params.connectionId as string)) {
+                console.error("Connection not found");
+                return false;
+            }
+
+            return true;
+        }
+    },
+    {
+        path: "/connection/:connectionId/devices/:id",
         name: "device",
         component: () => import("@/views/DeviceView.vue"),
         beforeEnter: (to) => {
@@ -35,7 +50,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: "/:connectionId/devices/:id/terminal",
+        path: "/connection/:connectionId/devices/:id/terminal",
         name: "device-terminal",
         component: () => import("@/views/DeviceTerminalView.vue"),
         beforeEnter: (to) => {

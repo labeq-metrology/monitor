@@ -28,14 +28,14 @@
                      :key="connection.id"
                      class="group/collapsible">
           <SidebarGroup class="bg-background rounded-md p-0">
-            <SidebarGroupLabel asChild>
+            <SidebarGroupLabel as-child class="p-0">
               <ConnectionButton :connection="connection"/>
             </SidebarGroupLabel>
             <CollapsibleContent
-                class="mx-4 mb-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
+                class="ml-[15px] mr-4 mb-2 text-muted-foreground border-l-sidebar-accent-foreground/20 border-l-2">
               <TooltipProvider v-for="device in connection.devices" :key="device.uuid">
                 <TooltipRoot :delayDuration="5000">
-                  <TooltipTrigger asChild class="mx-2 w-full">
+                  <TooltipTrigger as-child class="mx-2 w-full">
                     <SidebarMenuSubButton class="select-none cursor-pointer hover:bg-accent/50"
                                           @click.prevent="router.push({
                               name: 'device',

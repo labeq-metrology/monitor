@@ -6,11 +6,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 const props = defineProps<{
   showIcon?: boolean
   class?: HTMLAttributes['class']
-}>()
+}>();
 
 const width = computed(() => {
-  return `${Math.floor(Math.random() * 40) + 50}%`
-})
+  return `${Math.floor(Math.random() * 40) + 50}%`;
+});
 </script>
 
 <template>

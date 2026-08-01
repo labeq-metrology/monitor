@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { useFormField } from './useFormField'
 
-const props = defineProps<LabelProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<LabelProps & { class?: HTMLAttributes['class'] }>();
 
-const { error, formItemId } = useFormField()
+const { error, formItemId } = useFormField();
 </script>
 
 <template>

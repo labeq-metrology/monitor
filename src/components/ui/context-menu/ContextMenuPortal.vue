@@ -2,7 +2,7 @@
 import type { ContextMenuPortalProps } from "reka-ui"
 import { ContextMenuPortal } from "reka-ui"
 
-const props = defineProps<ContextMenuPortalProps>()
+const props = defineProps<ContextMenuPortalProps>();
 </script>
 
 <template>

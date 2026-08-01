@@ -22,6 +22,7 @@ export interface LayoutPanel {
     parameter: string;
     displayName?: string;
     readonly: boolean;
+    default: any;
 }
 
 export interface LayoutColumn {

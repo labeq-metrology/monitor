@@ -14,7 +14,7 @@ export function registerEventListeners() {
 
 const listenPluginErrors = () => {
     listen<LabeqErrorEvent>('plugin-error', (e) => {
-        console.log(e)
+        console.log(e);
         toast(`Plugin error (${e.payload.code})`, {
             description: e.payload.message,
             duration: ERROR_TOAST_DURATION,
@@ -22,6 +22,6 @@ const listenPluginErrors = () => {
                 label: "Close",
                 onClick: () => {},
             },
-        })
-    })
-}
+        });
+    });
+};

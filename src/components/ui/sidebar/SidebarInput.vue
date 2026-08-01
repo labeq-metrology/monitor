@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
-}>()
+}>();
 </script>
 
 <template>

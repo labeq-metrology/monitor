@@ -6,10 +6,10 @@ import {
   useForwardPropsEmits,
 } from "reka-ui"
 
-const props = defineProps<ContextMenuRadioGroupProps>()
-const emits = defineEmits<ContextMenuRadioGroupEmits>()
+const props = defineProps<ContextMenuRadioGroupProps>();
+const emits = defineEmits<ContextMenuRadioGroupEmits>();
 
-const forwarded = useForwardPropsEmits(props, emits)
+const forwarded = useForwardPropsEmits(props, emits);
 </script>
 
 <template>

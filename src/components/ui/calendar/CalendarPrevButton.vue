@@ -6,11 +6,11 @@ import { CalendarPrev, type CalendarPrevProps, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 
-const props = defineProps<CalendarPrevProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<CalendarPrevProps & { class?: HTMLAttributes['class'] }>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwardedProps = useForwardProps(delegatedProps)
+const forwardedProps = useForwardProps(delegatedProps);
 </script>
 
 <template>

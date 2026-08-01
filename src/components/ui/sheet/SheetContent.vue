@@ -20,16 +20,16 @@ interface SheetContentProps extends DialogContentProps {
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
 const props = withDefaults(defineProps<SheetContentProps>(), {
   side: 'right',
-})
-const emits = defineEmits<DialogContentEmits>()
+});
+const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class', 'side')
+const delegatedProps = reactiveOmit(props, 'class', 'side');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

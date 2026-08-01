@@ -9,10 +9,13 @@
         <div class="text-xs font-semibold text-foreground px-2 pb-1">
           Connections
         </div>
-        <div>
+        <div
+            ref="rootDropEl"
+            :class="{ 'ring-1 ring-ring ring-inset rounded-md': isOver }"
+        >
           <div
               v-if="isCreatingFolder"
-              class="flex items-center space-x-2 w-full mx-2"
+              class="flex items-center space-x-2 w-full px-2 py-1 rounded-md"
           >
             <Icon
                 icon="heroicons:chevron-right"
@@ -45,7 +48,7 @@
             />
           </div>
 
-          <template v-for="(item, index) in mappedConnections.items" :key="index">
+          <template v-for="(item, index) in connections.items" :key="index">
             <!-- Nested Folder -->
             <ConnectionFolder
                 v-if="item.type === 'folder'"
@@ -54,36 +57,45 @@
             />
 
             <!-- Connection Item -->
-            <SidebarMenuSubButton
-                v-else
-                class="flex items-center w-full gap-2 px-2 py-1 rounded-md hover:bg-accent/50 transition-colors cursor-pointer group"
+            <ContextMenu
+                v-else-if="connectionStore.connections.get(item.value)"
             >
-              <!-- TODO: Move to separate component -->
-              <div>
-                <Icon
-                    :icon="item.value.state == 'Connected' ? 'heroicons:signal-16-solid' : 'heroicons:signal-slash-16-solid'"
-                    :class="item.value.state == 'Connected' ? 'text-positive text-lg' : 'text-muted-foreground text-lg'"
-                />
-              </div>
-              <TooltipProvider>
-                <TooltipRoot :delayDuration="3000">
-                  <TooltipTrigger
+              <ContextMenuTrigger as-child>
+                <div
+                    class="flex items-center space-x-2 w-full px-2 py-1 rounded-md hover:bg-accent/50 transition-colors cursor-grab select-none touch-none"
+                    @pointerdown="startDrag('connection', item.value, connectionStore.connections.get(item.value)!.name, $event)"
+                >
+                  <Icon
+                      :icon="connectionStore.connections.get(item.value)!.state == 'Connected' ? 'heroicons:signal-16-solid' : 'heroicons:signal-slash-16-solid'"
+                      :class="connectionStore.connections.get(item.value)!.state == 'Connected' ? 'text-positive' : 'text-muted-foreground'"
+                      width="16"
+                      height="16"
+                  />
+                  <span
                       class="
-                    text-xs font-normal tracking-wide
-                    text-left max-w-8/12
-                    whitespace-nowrap overflow-hidden overflow-ellipsis
-                    cursor-pointer transition-colors
-                    text-muted-foreground
-                  "
-                  >
-                    {{ item.value.name }}
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{{ item.value.name }}</p>
-                  </TooltipContent>
-                </TooltipRoot>
-              </TooltipProvider>
-            </SidebarMenuSubButton>
+                        text-xs font-normal tracking-wide
+                        text-left flex-1
+                        whitespace-nowrap overflow-hidden overflow-ellipsis
+                        text-foreground
+                      "
+                  >{{ connectionStore.connections.get(item.value)!.name }}</span>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem @click="connectionStore.activateConnection(item.value)" class="cursor-pointer">
+                  Connect
+                </ContextMenuItem>
+                <ContextMenuItem @click="connectionStore.deactivateConnection(item.value)" class="cursor-pointer">
+                  Disconnect
+                </ContextMenuItem>
+                <ContextMenuItem @click="connectionStore.refreshDeviceList(item.value)" class="cursor-pointer">
+                  Refresh
+                </ContextMenuItem>
+                <ContextMenuItem @click="handleRemoveConnection(item.value)" variant="destructive" class="cursor-pointer">
+                  Remove
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           </template>
 
           <div
@@ -115,11 +127,9 @@
 
 <script setup lang="ts">
 import {Icon} from "@iconify/vue";
-import {TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import {TooltipRoot} from "reka-ui";
-import ConnectionFolder from "./ConnectionFolder.vue";
-import type {Folder, Item, LabeqConnection} from "@/lib/labeq.ts";
-import {computed, nextTick, ref} from "vue";
+import ConnectionFolder from "../connection/ConnectionFolder.vue";
+import type {Folder} from "@/lib/labeq.ts";
+import {nextTick, onMounted, ref} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {
   ContextMenu,
@@ -133,7 +143,7 @@ import {
 import {AlertDialog} from "@/components/ui/alert-dialog";
 import AddConnectionDialog from "@/components/monitor/dialogs/AddConnectionDialog.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
-import {SidebarMenuSubButton} from "@/components/ui/sidebar";
+import {useDragSource, useDragTarget} from "@/composables/useDrag.ts";
 
 const props = defineProps<{
   workspaceId: string
@@ -143,27 +153,19 @@ const props = defineProps<{
 const store = useWorkspaceStore();
 const connectionStore = useConnectionStore();
 
+const rootDropEl = ref<HTMLElement | null>(null);
+const { startDrag } = useDragSource();
+const { isOver, register } = useDragTarget(
+    () => rootDropEl.value,
+    'connection',
+    (connectionId) => store.moveConnectionToFolder(props.workspaceId, connectionId, undefined)
+);
+onMounted(register);
+
 const isCreatingFolder = ref(false);
 const isAddingConnection = ref(false);
 const newFolderName = ref("");
 const folderNameInput = ref<HTMLInputElement | null>(null);
-
-const mappedConnections = computed((): Folder<LabeqConnection> => {
-  const resolve = (items: Item<string>[]): Item<LabeqConnection>[] => {
-    return items.flatMap<Item<LabeqConnection>>(item => {
-      if (item.type === 'item') {
-        const connection = connectionStore.connections.get(item.value);
-        return connection ? [{ type: 'item', value: connection }] : [];
-      }
-      return [{
-        type: 'folder',
-        value: { ...item.value, items: resolve(item.value.items) }
-      }];
-    });
-  };
-
-  return { items: resolve(props.connections.items) };
-});
 
 
 const handleAddConnection = async (selectedConnectionId: string) => {
@@ -176,7 +178,7 @@ const startCreatingFolder = () => {
   nextTick(() => {
     setTimeout(() => {
       folderNameInput.value?.focus();
-    }, 200)
+    }, 200);
   });
 };
 

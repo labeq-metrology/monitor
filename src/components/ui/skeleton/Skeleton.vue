@@ -6,7 +6,7 @@ interface SkeletonProps {
   class?: HTMLAttributes['class']
 }
 
-const props = defineProps<SkeletonProps>()
+const props = defineProps<SkeletonProps>();
 </script>
 
 <template>

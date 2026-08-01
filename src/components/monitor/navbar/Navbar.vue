@@ -6,7 +6,7 @@ import {Button} from "@/components/ui/button";
 import {Icon} from "@iconify/vue";
 import {invoke} from "@tauri-apps/api/core";
 
-const mode = useColorMode()
+const mode = useColorMode();
 </script>
 
 <template>

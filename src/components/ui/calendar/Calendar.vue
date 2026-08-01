@@ -5,12 +5,12 @@ import { CalendarRoot, type CalendarRootEmits, type CalendarRootProps, useForwar
 import { cn } from '@/lib/utils'
 import { CalendarCell, CalendarCellTrigger, CalendarGrid, CalendarGridBody, CalendarGridHead, CalendarGridRow, CalendarHeadCell, CalendarHeader, CalendarHeading, CalendarNextButton, CalendarPrevButton } from '.'
 
-const props = defineProps<CalendarRootProps & { class?: HTMLAttributes['class'] }>()
-const emits = defineEmits<CalendarRootEmits>()
+const props = defineProps<CalendarRootProps & { class?: HTMLAttributes['class'] }>();
+const emits = defineEmits<CalendarRootEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

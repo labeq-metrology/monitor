@@ -13,7 +13,7 @@ const router = createRouter({
         // {name: "popup-home", path: "/popup.html", component: WelcomeView},
         {name: "plugins", path: "/plugins", component: () => import("@/settings/views/PluginsView.vue")}
     ]
-})
+});
 
 app.use(router);
 app.mount("#app");

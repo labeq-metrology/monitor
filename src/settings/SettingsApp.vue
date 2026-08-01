@@ -49,12 +49,12 @@ import {useRoute, useRouter} from "vue-router";
 
 const settingsStructure: { [key: string]: string[] } = {
   general: ['appearance', 'plugins']
-}
+};
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-useColorMode()
+useColorMode();
 </script>
 
 <style lang="scss" scoped>

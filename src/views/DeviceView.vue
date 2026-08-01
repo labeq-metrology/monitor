@@ -4,10 +4,10 @@
       <h2 class="text-xl">{{ device?.name }}</h2>
       <p class="text-muted-foreground">{{ device?.manufacturer }} &mdash; {{ device?.model }}</p>
       <p class="text-xs text-muted-foreground">Loaded driver: {{ device?.driver }}</p>
-      <ul class="mt-2 flex gap-2">
+      <ul class="mt-2 flex gap-2 w-full">
         <li>
           <Button variant="default" class="h-6 text-xs disabled:[&_svg]:animate-bounce" @click="writeAllParameters"
-                  :disabled="!layout || activeWriteRequests.size > 0">
+                  :disabled="!layout || activeWriteRequests.size > 0 || !connectionActive">
             <Icon icon="heroicons:arrow-up-tray" width="24" height="24" v-if="activeWriteRequests.size === 0"/>
             <Icon icon="heroicons:arrow-up" width="24" height="24" v-else/>
             <span>Set all parameters</span>
@@ -15,7 +15,7 @@
         </li>
         <li>
           <Button variant="secondary" class="h-6 text-xs disabled:[&_svg]:animate-spin" @click="refreshParameters"
-                  :disabled="!layout || activeReadRequests.size > 0">
+                  :disabled="!layout || activeReadRequests.size > 0 || !connectionActive">
             <Icon icon="heroicons:arrow-path" width="24" height="24"/>
             <span>Refresh parameters</span>
           </Button>
@@ -28,19 +28,29 @@
             <p>Auto-update</p>
           </Button>
         </li>
-        <li>
-          <Button :variant="'ghost'" class="h-6 mx-1" style="padding: 0"
+        <li class="ml-auto">
+          <Button :variant="'ghost'" class="h-6 mr-0"
                   @click.prevent="router.push({
                               name: 'device-terminal',
                               params: { connectionId: route.params.connectionId as string, id: device?.uuid }
                             })"
           >
-            <Icon icon="heroicons:command-line" class="scale-150 px-0 mx-0" width="24" height="24"/>
+            <Icon icon="heroicons:command-line" class="scale-150 px-0" width="24" height="24"/>
           </Button>
         </li>
       </ul>
     </header>
     <Separator class="mt-2 mb-2"/>
+    <Alert variant="destructive" class="mt-4 mb-2" v-if="!connectionActive">
+      <Icon
+          icon="heroicons:exclamation-triangle-16-solid"
+          class="text-destructive p-0"
+          width="16"
+          height="16"
+      />
+      <AlertTitle>Connection inactive!</AlertTitle>
+      <AlertDescription>Activate the connection in order to use this panel.</AlertDescription>
+    </Alert>
     <article
         class="grid"
         :style="{
@@ -81,9 +91,12 @@
                 </div>
               </div>
               <div class="mt-2">
-                <DevicePanel :id="`${device?.uuid},${panel.parameter}`" :definition="panel"
-                             v-model:data="parameters[panel.parameter]" v-model:error="errors[panel.parameter]"
-                             :refreshing="refreshing"/>
+                <DevicePanel
+                    :id="`${device?.uuid},${panel.parameter}`"
+                    :definition="panel"
+                    v-model:data="parameters[panel.parameter].value"
+                    v-model:error="errors[panel.parameter]"
+                    :refreshing="refreshing"/>
               </div>
             </div>
           </div>
@@ -96,142 +109,99 @@
 <script setup lang="ts">
 import {useRoute, useRouter} from "vue-router";
 import {invoke} from "@tauri-apps/api/core";
-import {computed, onBeforeUnmount, onMounted, provide, reactive, ref} from "vue";
+import {computed, onBeforeUnmount, onMounted, provide, ref, watch} from "vue";
 import {LayoutSchema} from "@/lib/plugin.ts";
 import DevicePanel from "@/components/monitor/device/DevicePanel.vue";
 import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Icon} from "@iconify/vue";
-import {ParameterValue, ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
-import {listen} from "@tauri-apps/api/event";
 import usePlugin from "@/composables/usePlugin.ts";
 import useDevice from "@/composables/useDevice.ts";
 import {Button} from "@/components/ui/button";
+import useDeviceParameters from "@/composables/useDeviceParameters.ts";
+import {useConnectionStore} from "@/store/connection.store.ts";
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 
 const route = useRoute();
 const router = useRouter();
 
-const device = useDevice();
-let plugin = usePlugin(device.value!!);
 let layout = ref<LayoutSchema | null>(null);
 
+const connectionStore = useConnectionStore()
+const device = useDevice();
+const {
+  parameters,
+  errors,
+  refreshing,
+  autoupdate,
+  refreshParameters,
+  writeAllParameters,
+  activeWriteRequests,
+  activeReadRequests,
+  publishListener
+} = useDeviceParameters(device, layout);
+
+const connectionActive = computed(() => connectionStore.connections.get(route.params.connectionId as string)?.state === 'Connected');
+
 provide('device', device);
-provide('plugin', plugin);
-
-const autoupdate = ref(true);
-const refreshing = computed(() => activeReadRequests.size > 0);
-
-const parameters = reactive<Record<string, ParameterValue>>({});
-const errors = reactive<Record<string, string>>({});
-
-const activeReadRequests = reactive<Map<string, string>>(new Map());
-const activeWriteRequests = reactive<Map<string, string>>(new Map());
+provide('plugin', device.value ? usePlugin(device.value) : null);
 
 if (!device) {
   router.push("/");
 }
 
-const publishListener = await listen("mqtt-publish", (e: any) => {
-  const requestRegex = /^device\/(?<device>.+)\/requests\/(?<request>.+)\/(?<action>.+)/;
-  const updateRegex = /^device\/(?<device>.+)\/parameters\/(?<parameter>.+)\/(?<action>.+)/;
-  const requestMatch = requestRegex.exec(e.payload.event.topic);
-  const updateMatch = updateRegex.exec(e.payload.event.topic);
-  console.log(e.payload.event.topic);
-  if (requestMatch?.groups) handleRequest(requestMatch, e);
-  else if (updateMatch?.groups) handleUpdate(updateMatch, e);
-});
-
-const handleRequest = (match: RegExpExecArray, e: any) => {
-  if (!match.groups || match.groups.action !== 'resolve') return;
-  if (!activeReadRequests.has(match.groups?.request) && !activeWriteRequests.has(match.groups?.request)) return;
-
-  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.payload))) as ReadRequestResponse;
-  activeReadRequests.delete(match.groups?.request);
-  activeWriteRequests.delete(match.groups?.request);
-  if (parsedResponse.error) {
-    errors[parsedResponse.parameter] = parsedResponse.error;
-    return;
-  }
-  parameters[parsedResponse.parameter] = parsedResponse.resolvedValue?.value!!;
-  delete errors[parsedResponse.parameter];
-};
-
-const handleUpdate = (match: RegExpExecArray, e: any) => {
-  if (!autoupdate.value || match.groups?.action !== 'update') return;
-  const parsedResponse = JSON.parse(new TextDecoder().decode(new Uint8Array(e.payload.event.payload))) as UpdateMessage;
-  if (parsedResponse.error) {
-    errors[match.groups.parameter] = parsedResponse.error;
-    return;
-  }
-  parameters[match.groups.parameter] = parsedResponse.newValue.value!!;
-  delete errors[match.groups.parameter];
-};
-
 onMounted(async () => {
   if (!device.value) return;
-  invoke('update_device_parameters', { connId: route.params.connectionId, deviceId: device.value.uuid});
 
-  layout.value = await invoke<LayoutSchema>('load_layout', {
-    driver: device.value.driver,
-    variant: device.value.model
-  });
+  try {
+    layout.value = await invoke<LayoutSchema>('load_layout', {
+      driver: device.value.driver,
+      variant: device.value.model
+    });
 
-  await refreshParameters();
+    if (layout.value?.rows) {
+      for (const row of layout.value.rows) {
+        for (const column of row.columns) {
+          for (const panel of column.panels) {
+            if (!parameters[panel.parameter]) {
+              parameters[panel.parameter] = {
+                paramType: '',
+                value: panel.default
+              };
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load layout configuration:", error);
+  }
 });
 
-const refreshParameters = async () => {
-  if (!layout.value) return;
-  layout.value.rows
-      .forEach(row => row.columns
-          .forEach(column => column.panels
-              .forEach(panel => {
-                const uuid = crypto.randomUUID();
-                activeReadRequests.set(uuid, panel.parameter);
-                invoke('gateway_publish', {
-                  connId: route.params.connectionId as string,
-                  topic: `device/${device.value!!.uuid}/parameters/${panel.parameter}/read`,
-                  payload: JSON.stringify({
-                    requestId: uuid,
-                    returnType: 'same_as_input'
-                  }),
-                  retain: false
-                });
-              })
-          )
-      );
-}
+const fetchDeviceData = async () => {
+  if (!device.value) return;
 
-const writeAllParameters = async () => {
-  if (!layout.value) return;
-  layout.value.rows
-      .forEach(row => row.columns
-          .forEach(column => column.panels
-              .forEach(panel => {
-                writeParameter(panel.parameter);
-              })
-          )
-      );
+  try {
+    await invoke('update_device_parameters', {
+      connId: route.params.connectionId,
+      deviceId: device.value.uuid
+    });
+
+    await refreshParameters();
+  } catch (error) {
+    console.error("Failed to sync device parameters over active connection:", error);
+  }
 };
 
-const writeParameter = async (parameter: string) => {
-  if (!layout.value) return;
-  const uuid = crypto.randomUUID();
-  invoke('gateway_publish', {
-    connId: route.params.connectionId as string,
-    topic: `device/${device.value!!.uuid}/parameters/${parameter}/write`,
-    payload: JSON.stringify({
-      requestId: uuid,
-      contentType: 'labeq/string',
-      value: parameters[parameter]
-    }),
-    retain: false
-  });
-  activeWriteRequests.set(uuid, parameter);
-};
+watch(connectionActive, async (isActive) => {
+  if (isActive) {
+    await fetchDeviceData();
+  }
+}, {immediate: true});
 
-onBeforeUnmount(() => {
-  publishListener();
+onBeforeUnmount(async () => {
+  (await publishListener)();
 });
 </script>
 

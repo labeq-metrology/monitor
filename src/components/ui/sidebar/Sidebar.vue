@@ -9,15 +9,15 @@ import { SIDEBAR_WIDTH_MOBILE, useSidebar } from './utils'
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   side: 'left',
   variant: 'sidebar',
   collapsible: 'offcanvas',
-})
+});
 
-const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 </script>
 
 <template>

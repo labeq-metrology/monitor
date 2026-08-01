@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
 const props = withDefaults(
   defineProps<PopoverContentProps & { class?: HTMLAttributes['class'] }>(),
@@ -20,12 +20,12 @@ const props = withDefaults(
     align: 'center',
     sideOffset: 4,
   },
-)
-const emits = defineEmits<PopoverContentEmits>()
+);
+const emits = defineEmits<PopoverContentEmits>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

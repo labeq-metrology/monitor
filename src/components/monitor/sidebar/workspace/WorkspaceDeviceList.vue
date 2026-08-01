@@ -7,7 +7,10 @@
       <div class="text-xs font-semibold text-foreground px-2 pb-1">
         Devices
       </div>
-      <div>
+      <div
+          ref="rootDropEl"
+          :class="{ 'ring-1 ring-ring ring-inset rounded-md': isOver }"
+      >
         <div
             v-if="isCreatingFolder"
             class="flex items-center gap-2 w-full px-2 h-8 rounded-md"
@@ -88,7 +91,7 @@
 import {Icon} from "@iconify/vue";
 import DeviceFolder from "../device/DeviceFolder.vue";
 import {Folder} from "@/lib/labeq.ts";
-import {nextTick, ref} from "vue";
+import {nextTick, onMounted, ref} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {
   ContextMenu,
@@ -103,6 +106,7 @@ import {AlertDialog} from "@/components/ui/alert-dialog";
 import AddDeviceDialog from "@/components/monitor/dialogs/AddDeviceDialog.vue";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import DeviceButton from "@/components/monitor/sidebar/device/DeviceButton.vue";
+import {useDragTarget} from "@/composables/useDrag.ts";
 
 defineEmits<{
   createFolder: [workspaceId: string, parentId: string | undefined, folderName: string]
@@ -117,6 +121,13 @@ const props = defineProps<{
 
 const connectionStore = useConnectionStore();
 const store = useWorkspaceStore();
+const rootDropEl = ref<HTMLElement | null>(null);
+const { isOver, register } = useDragTarget(
+    () => rootDropEl.value,
+    'device',
+    (deviceId) => store.moveDeviceToFolder(props.workspaceId, deviceId, undefined)
+);
+onMounted(register);
 
 const isCreatingFolder = ref(false);
 const isAddingDevice = ref(false);
@@ -168,9 +179,9 @@ const cancelCreateFolder = () => {
   isCreatingFolder.value = false;
 };
 
-const handleRemoveDevice = async (deviceId: string) => {
-  if (confirm('Remove this device from workspace?')) {
-    await store.removeDeviceFromWorkspace(props.workspaceId, deviceId);
-  }
-};
+// const handleRemoveDevice = async (deviceId: string) => {
+//   if (confirm('Remove this device from workspace?')) {
+//     await store.removeDeviceFromWorkspace(props.workspaceId, deviceId);
+//   }
+// };
 </script>

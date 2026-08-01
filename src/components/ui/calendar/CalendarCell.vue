@@ -4,11 +4,11 @@ import { reactiveOmit } from '@vueuse/core'
 import { CalendarCell, type CalendarCellProps, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<CalendarCellProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<CalendarCellProps & { class?: HTMLAttributes['class'] }>();
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class');
 
-const forwardedProps = useForwardProps(delegatedProps)
+const forwardedProps = useForwardProps(delegatedProps);
 </script>
 
 <template>

@@ -2,7 +2,7 @@
 import type { ContextMenuGroupProps } from "reka-ui"
 import { ContextMenuGroup } from "reka-ui"
 
-const props = defineProps<ContextMenuGroupProps>()
+const props = defineProps<ContextMenuGroupProps>();
 </script>
 
 <template>

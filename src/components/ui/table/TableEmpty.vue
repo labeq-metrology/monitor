@@ -10,9 +10,9 @@ const props = withDefaults(defineProps<{
   colspan?: number
 }>(), {
   colspan: 1,
-})
+});
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class");
 </script>
 
 <template>
