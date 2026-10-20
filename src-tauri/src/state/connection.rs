@@ -25,6 +25,20 @@ pub struct ConnectionData {
     #[serde(default)]
     pub state: ConnectionState,
     pub devices: Vec<LabeqDevice>,
+    #[serde(default)]
+    pub scripts: Vec<ScriptStatus>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptStatus {
+    pub execution_id: String,
+    pub script: String,
+    pub status: String,
+    #[serde(default)]
+    pub heartbeat_id: i32,
+    #[serde(default)]
+    pub last_heartbeat_at: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

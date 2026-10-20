@@ -29,6 +29,15 @@ export interface LabeqConnection {
     password: string;
     state: "Disconnected" | "Connecting" | "Connected" | "ConnectionError";
     devices: LabeqDevice[];
+    scripts: LabeqScriptStatus[];
+}
+
+export interface LabeqScriptStatus {
+    executionId: string;
+    script: string;
+    status: string;
+    heartbeatId?: number;
+    lastHeartbeatAt?: number;
 }
 
 export interface Folder<T> {

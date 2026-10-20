@@ -134,6 +134,7 @@ pub async fn create_connection(
         password,
         state: ConnectionState::Disconnected,
         devices: Vec::new(),
+        scripts: Vec::new(),
     };
 
     MQTT_CLIENTS.write().await.insert(
@@ -187,6 +188,10 @@ pub async fn connection_activate(app: AppHandle, conn_id: String) -> Result<(), 
 
     client
         .subscribe("device/#", QoS::AtLeastOnce)
+        .await
+        .map_err(|e| format!("Subscription failed: {e}"))?;
+    client
+        .subscribe("script/#", QoS::AtLeastOnce)
         .await
         .map_err(|e| format!("Subscription failed: {e}"))?;
 
