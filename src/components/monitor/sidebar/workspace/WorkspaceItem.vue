@@ -56,10 +56,12 @@
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem @click="startEditing" class="cursor-pointer">
+          <ContextMenuItem @click="startEditing">
+            <Icon icon="heroicons:pencil"/>
             Rename
           </ContextMenuItem>
-          <ContextMenuItem @click="emit('delete', workspace)" class="cursor-pointer text-destructive">
+          <ContextMenuItem @click="emit('delete', workspace)" variant="destructive">
+            <Icon icon="heroicons:trash"/>
             Delete
           </ContextMenuItem>
         </ContextMenuContent>
@@ -67,7 +69,7 @@
     </CollapsibleTrigger>
 
     <CollapsibleContent>
-      <div class="ml-4 space-y-1 py-1 overflow-hidden">
+      <div class="ml-4 space-y-1 pt-0 pb-2 overflow-hidden">
         <div>
           <WorkspaceConnectionList :workspace-id="workspace.id" :connections="workspace.connections"/>
         </div>

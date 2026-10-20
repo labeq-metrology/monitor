@@ -14,7 +14,10 @@
           />
           <Icon
               :icon="connection.state == 'Connected' ? 'heroicons:signal-16-solid' : 'heroicons:signal-slash-16-solid'"
-              :class="[connection.state == 'Connected' ? 'text-positive' : 'text-muted-foreground', 'shrink-0']"
+              :class="[
+                connection.state == 'Connected' ? '!text-positive' : '!text-muted-foreground',
+                'shrink-0',
+              ]"
               width="16"
               height="16"
           />
@@ -33,16 +36,20 @@
         </SidebarMenuSubButton>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem @click="connectionStore.activateConnection(connection.id)" class="cursor-pointer">
+        <ContextMenuItem @click="connectionStore.activateConnection(connection.id)">
+          <Icon icon="heroicons:signal"/>
           Connect
         </ContextMenuItem>
-        <ContextMenuItem @click="connectionStore.deactivateConnection(connection.id)" class="cursor-pointer">
+        <ContextMenuItem @click="connectionStore.deactivateConnection(connection.id)">
+          <Icon icon="heroicons:signal-slash"/>
           Disconnect
         </ContextMenuItem>
-        <ContextMenuItem @click="connectionStore.refreshDeviceList(connection.id)" class="cursor-pointer">
+        <ContextMenuItem @click="connectionStore.refreshDeviceList(connection.id)">
+          <Icon icon="heroicons:arrow-path"/>
           Refresh
         </ContextMenuItem>
-        <ContextMenuItem variant="destructive" class="cursor-pointer">
+        <ContextMenuItem variant="destructive">
+          <Icon icon="heroicons:trash"/>
           Remove
         </ContextMenuItem>
       </ContextMenuContent>

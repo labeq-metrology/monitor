@@ -168,12 +168,7 @@ pub fn move_device_to_folder(
 pub fn add_connection_to_workspace(app: AppHandle, workspace_id: String, connection_id: String) {
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
-            if (!workspace
-                .connections
-                .items
-                .iter()
-                .any(|item| matches!(item, Item::Item(c) if c == &connection_id)))
-            {
+            if !contains_item_recursive(&workspace.connections.items, |id| id == &connection_id) {
                 workspace.connections.items.push(Item::Item(connection_id));
             }
         }
@@ -353,7 +348,18 @@ fn add_item_to_folder<T: Clone>(items: &mut Vec<Item<T>>, folder_id: &str, value
                 folder.items.push(Item::Item(value));
                 return;
             }
+
             add_item_to_folder(&mut folder.items, folder_id, value.clone());
         }
     }
+}
+
+fn contains_item_recursive<T, F>(items: &[Item<T>], predicate: F) -> bool
+where
+    F: Fn(&T) -> bool + Copy,
+{
+    items.iter().any(|item| match item {
+        Item::Item(value) => predicate(value),
+        Item::Folder(folder) => contains_item_recursive(&folder.items, predicate),
+    })
 }

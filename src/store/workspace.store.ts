@@ -1,6 +1,6 @@
 import {defineStore} from "pinia";
 import {reactive} from "vue";
-import {AppState, LabeqWorkspace} from "@/lib/labeq.ts";
+import {AppState, Folder, Item, LabeqWorkspace} from "@/lib/labeq.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {listen} from "@tauri-apps/api/event";
 
@@ -47,6 +47,18 @@ export const useWorkspaceStore = defineStore('workspaces', () => {
         workspaceId,
         connectionId
     });
+    const workspaceHasConnection = (workspaceId: string, connectionId: string) => {
+        const workspace = workspaces.get(workspaceId);
+        if (!workspace) return false;
+
+        const containsConnection = (items: Item<string>[]): boolean => items.some(item =>
+            item.type === 'item'
+                ? item.value === connectionId
+                : containsConnection(item.value.items)
+        );
+
+        return containsConnection((workspace.connections as Folder<string>).items);
+    };
     const removeConnectionFromWorkspace = async (workspaceId: string, connectionId: string) => invoke<void>('remove_connection_from_workspace', {
         workspaceId,
         connectionId
@@ -97,6 +109,7 @@ export const useWorkspaceStore = defineStore('workspaces', () => {
         moveDeviceToFolder,
 
         addConnectionToWorkspace,
+        workspaceHasConnection,
         removeConnectionFromWorkspace,
         createConnectionFolder,
         renameConnectionFolder,

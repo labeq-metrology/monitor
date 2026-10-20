@@ -1,16 +1,19 @@
 <template>
-  <Collapsible class="group/device-folder">
+  <AlertDialog v-model:open="isAddingDevice">
+    <AddDeviceDialog :workspace-id="workspaceId" @confirm="handleAddDevice"/>
+  </AlertDialog>
+  <Collapsible v-model:open="isOpen" class="group/device-folder">
     <div ref="triggerEl">
       <CollapsibleTrigger
-          class="group/folder-trigger transition-colors duration-75 cursor-pointer w-full px-2 py-1 rounded-md hover:bg-accent/50"
+          class="group/button group/folder-trigger h-6 w-full justify-start rounded-md px-2 font-normal transition-colors duration-75 aria-expanded:bg-transparent aria-expanded:hover:bg-muted dark:aria-expanded:hover:bg-muted/50"
           :class="{ 'outline outline-1 outline-ring bg-accent/30': isOver }"
       >
         <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <div class="flex items-center space-x-2 w-full">
+          <ContextMenuTrigger as-child>
+            <div class="flex w-full items-center gap-2">
               <Icon
-                  icon="heroicons:chevron-down"
-                  class="transition-transform duration-300 group-data-[state=closed]/device-folder:-rotate-90 text-accent-foreground"
+                  icon="heroicons:chevron-right"
+                  class="transition-transform group-data-[state=open]/button:rotate-90 text-accent-foreground"
                   width="16"
                   height="16"
               />
@@ -24,7 +27,7 @@
                   v-if="!isEditing"
                   @dblclick="startEditing"
                   class="
-                  text-xs font-normal tracking-wide
+                  text-xs font-normal
                   text-left flex-1
                   whitespace-nowrap overflow-hidden overflow-ellipsis
                   cursor-pointer transition-colors
@@ -44,7 +47,7 @@
                   @keyup.esc="cancelEdit"
                   @click.stop
                   class="
-                  text-xs font-normal tracking-wide
+                  text-xs font-normal
                   text-left flex-1
                   bg-background border border-border rounded px-1
                   focus:outline-none focus:ring-1 focus:ring-ring
@@ -52,20 +55,24 @@
                   h-[1.125rem] leading-[1.125rem]
                 "
               />
-              <span class="text-xs text-muted-foreground h-[1.125rem] leading-[1.125rem]">{{ itemCount }}</span>
+              <span class="text-xs text-muted-foreground">{{ itemCount }}</span>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem @click="handleAddSubfolder" class="cursor-pointer">
-              <Icon icon="heroicons:folder-plus" width="16" height="16" class="mr-2"/>
+            <ContextMenuItem @click="isAddingDevice = true">
+              <Icon icon="heroicons:cpu-chip"/>
+              Add device
+            </ContextMenuItem>
+            <ContextMenuItem @click="handleAddSubfolder">
+              <Icon icon="heroicons:folder-plus"/>
               Add subfolder
             </ContextMenuItem>
-            <ContextMenuItem @click="startEditing" class="cursor-pointer">
-              <Icon icon="heroicons:pencil" width="16" height="16" class="mr-2"/>
+            <ContextMenuItem @click="startEditing">
+              <Icon icon="heroicons:pencil"/>
               Rename
             </ContextMenuItem>
-            <ContextMenuItem @click="handleDelete" class="cursor-pointer text-destructive">
-              <Icon icon="heroicons:trash" width="16" height="16" class="mr-2"/>
+            <ContextMenuItem @click="handleDelete" variant="destructive">
+              <Icon icon="heroicons:trash"/>
               Delete
             </ContextMenuItem>
           </ContextMenuContent>
@@ -74,10 +81,10 @@
     </div>
 
     <CollapsibleContent>
-      <div class="ml-4">
+      <div class="ml-4 flex flex-col">
         <div
             v-if="isCreatingSubfolder"
-            class="flex items-center space-x-2 w-full px-2 py-1 rounded-md"
+            class="flex h-7 w-full items-center gap-2 rounded-md px-2"
         >
           <Icon icon="heroicons:chevron-down" class="opacity-0" width="16" height="16"/>
           <Icon icon="heroicons:folder" class="text-muted-foreground" width="16" height="16"/>
@@ -90,7 +97,7 @@
               @click.stop
               placeholder="Folder name..."
               class="
-                text-xs font-normal tracking-wide
+                text-xs font-normal
                 text-left flex-1
                 bg-background border border-border rounded px-1
                 focus:outline-none focus:ring-1 focus:ring-ring
@@ -112,6 +119,7 @@
               v-else-if="getResolved(item.value[1])"
               :connection="getResolved(item.value[1])!.connection"
               :device="getResolved(item.value[1])!.device"
+              :workspace-id="workspaceId"
               :name="getResolved(item.value[1])!.device.name"
           />
         </template>
@@ -124,6 +132,8 @@
 import {Icon} from "@iconify/vue";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu";
+import {AlertDialog} from "@/components/ui/alert-dialog";
+import AddDeviceDialog from "@/components/monitor/dialogs/AddDeviceDialog.vue";
 import type {Item, LabeqConnection, LabeqDevice, NestedFolder} from "@/lib/labeq.ts";
 import {computed, nextTick, onMounted, ref, watchEffect} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.ts";
@@ -143,7 +153,8 @@ const triggerEl = ref<HTMLElement | null>(null);
 const {isOver, register} = useDragTarget(
     () => triggerEl.value,
     'device',
-    (deviceId) => store.moveDeviceToFolder(props.workspaceId, deviceId, props.folder.id)
+    (deviceId) => store.moveDeviceToFolder(props.workspaceId, deviceId, props.folder.id),
+    10
 );
 onMounted(register);
 watchEffect(register);
@@ -186,7 +197,7 @@ const resolvedDeviceMap = computed(() => {
     const device = connection.devices.find(d => d.uuid === deviceId);
     if (!device) continue;
 
-    map.set(deviceId, { connection, device });
+    map.set(deviceId, {connection, device});
   }
 
   return map;
@@ -203,12 +214,14 @@ const itemCount = computed(() =>
 /* ------------------ UI state ------------------ */
 
 const isEditing = ref(false);
+const isOpen = ref(false);
 const editingName = ref(props.folder.name);
 const nameInput = ref<HTMLInputElement | null>(null);
 
 const isCreatingSubfolder = ref(false);
 const newSubfolderName = ref("");
 const subfolderNameInput = ref<HTMLInputElement | null>(null);
+const isAddingDevice = ref(false);
 
 /* ------------------ actions ------------------ */
 
@@ -238,16 +251,25 @@ const handleDelete = async () => {
 };
 
 const handleAddSubfolder = () => {
-  isCreatingSubfolder.value = true;
-  nextTick(() => {
-    setTimeout(() => {
-      subfolderNameInput.value?.focus();
-    }, 250);
-  });
+  window.setTimeout(() => {
+    isOpen.value = true;
+    isCreatingSubfolder.value = true;
+    nextTick(() => subfolderNameInput.value?.focus());
+  }, 0);
+};
+
+const handleAddDevice = async (connectionId?: string, deviceId?: string) => {
+  isAddingDevice.value = false;
+  if (!connectionId || !deviceId) return;
+
+  await store.addConnectionToWorkspace(props.workspaceId, connectionId);
+  await store.addDeviceToWorkspace(props.workspaceId, connectionId, deviceId);
+  await store.moveDeviceToFolder(props.workspaceId, deviceId, props.folder.id);
 };
 
 const confirmCreateSubfolder = async () => {
   if (newSubfolderName.value.trim()) {
+    isOpen.value = true;
     await store.createDeviceFolder(props.workspaceId, props.folder.id, newSubfolderName.value.trim());
     newSubfolderName.value = "";
     isCreatingSubfolder.value = false;
@@ -257,7 +279,7 @@ const confirmCreateSubfolder = async () => {
 };
 
 const handleSubfolderBlur = () => {
-  setTimeout(() => {
+  window.setTimeout(() => {
     if (newSubfolderName.value.trim()) {
       confirmCreateSubfolder();
     } else {

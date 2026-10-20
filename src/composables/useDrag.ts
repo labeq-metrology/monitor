@@ -1,4 +1,4 @@
-import { ref, reactive, onUnmounted, shallowRef } from 'vue';
+import {ref, reactive, onUnmounted, shallowRef} from 'vue';
 
 const DRAG_THRESHOLD = 5;
 
@@ -25,6 +25,7 @@ interface Target {
     accepts: DragType;
     onDrop: (id: string) => void;
     isOver: ReturnType<typeof ref<boolean>>;
+    priority: number;
 }
 
 const targets = shallowRef<Target[]>([]);
@@ -55,7 +56,11 @@ function hitTest(x: number, y: number): Target | null {
 
         const area = r.width * r.height;
 
-        if (area < bestArea) {
+        if (
+            !best ||
+            t.priority > best.priority ||
+            (t.priority === best.priority && area < bestArea)
+        ) {
             best = t;
             bestArea = area;
         }
@@ -100,6 +105,9 @@ function useDragCore() {
         label: string,
         e: PointerEvent
     ) {
+        if (e.button !== 0 || !e.isPrimary) return;
+        if (dragState.active) return;
+
         const source = e.currentTarget as HTMLElement;
 
         startX = e.clientX;
@@ -109,8 +117,15 @@ function useDragCore() {
 
         dragState.type = type;
         dragState.id = id;
+        dragState.active = false;
         dragState.x = e.clientX;
         dragState.y = e.clientY;
+
+        try {
+            source.setPointerCapture(e.pointerId);
+            activePointerId = e.pointerId;
+        } catch {
+        }
 
         const onMove = (ev: PointerEvent) => {
             dragState.x = ev.clientX;
@@ -123,11 +138,7 @@ function useDragCore() {
                 if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
                 dragging = true;
-                activePointerId = ev.pointerId;
-
-                try {
-                    source.setPointerCapture(ev.pointerId);
-                } catch {}
+                dragState.active = true;
 
                 ghost.value = {
                     label,
@@ -143,23 +154,25 @@ function useDragCore() {
         };
 
         const end = (ev: PointerEvent) => {
-            source.removeEventListener('pointermove', onMove);
-            source.removeEventListener('pointerup', end);
-            source.removeEventListener('pointercancel', end);
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', end);
+            window.removeEventListener('pointercancel', end);
             window.removeEventListener('blur', end);
 
             cancelAnimationFrame(raf);
 
-            if (dragging && activeTarget && dragState.id) {
-                activeTarget.onDrop(dragState.id);
+            const dropTarget = dragging ? hitTest(ev.clientX, ev.clientY) : null;
+
+            if (dropTarget && dragState.id) {
+                dropTarget.onDrop(dragState.id);
             }
 
-            if (activeTarget) {
-                activeTarget.isOver.value = false;
-                activeTarget = null;
-            }
+            if (activeTarget) activeTarget.isOver.value = false;
+            if (dropTarget) dropTarget.isOver.value = false;
+            activeTarget = null;
 
             ghost.value.visible = false;
+            dragState.active = false;
 
             try {
                 if (
@@ -168,7 +181,8 @@ function useDragCore() {
                 ) {
                     source.releasePointerCapture(activePointerId);
                 }
-            } catch {}
+            } catch {
+            }
 
             activePointerId = null;
             dragging = false;
@@ -177,9 +191,9 @@ function useDragCore() {
             dragState.id = null;
         };
 
-        source.addEventListener('pointermove', onMove);
-        source.addEventListener('pointerup', end);
-        source.addEventListener('pointercancel', end);
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', end);
         window.addEventListener('blur', end);
     }
 
@@ -211,7 +225,8 @@ export function useDragSource() {
 export function useDragTarget(
     el: () => HTMLElement | null,
     accepts: DragType,
-    onDrop: (id: string) => void
+    onDrop: (id: string) => void,
+    priority = 0
 ) {
     const isOver = ref(false);
 
@@ -235,6 +250,7 @@ export function useDragTarget(
                 accepts,
                 onDrop,
                 isOver,
+                priority,
             });
         }
     }
@@ -249,5 +265,5 @@ export function useDragTarget(
         isOver.value = false;
     });
 
-    return { isOver, register };
+    return {isOver, register};
 }
