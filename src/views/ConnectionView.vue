@@ -2,7 +2,7 @@
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {useRoute, useRouter} from "vue-router";
 import {Separator} from "@/components/ui/separator";
-import {computed, onBeforeUnmount, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Badge} from "@/components/ui/badge";
@@ -49,6 +49,31 @@ interface ScriptExecution {
   lastHeartbeatAt: number | null;
   startedAt: number;
   log: string[];
+  steps?: MeasurementStep[];
+}
+
+interface MeasurementStep {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  startedAt: number;
+  completedAt: number | null;
+  error: string | null;
+  results: MeasurementResult[];
+}
+
+interface MeasurementResult {
+  key: string;
+  value: string | number | boolean | null | unknown[];
+  unit: string;
+  status: string;
+  requiredValue?: string | number | boolean | null | unknown[];
+  tolerance?: number | null;
+  condition?: string | null;
+  lowerBound?: string | number | boolean | null | unknown[];
+  upperBound?: string | number | boolean | null | unknown[];
+  recordedAt: number;
 }
 
 interface GatewayRunner {
@@ -64,6 +89,7 @@ const runners = ref<GatewayRunner[]>([]);
 const executions = ref<ScriptExecution[]>([]);
 const selectedExecution = ref<ScriptExecution | null>(null);
 const isRunDialogOpen = ref(false);
+const measurementStepsArea = ref<HTMLElement | null>(null);
 const scriptsError = ref<string | null>(null);
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -124,6 +150,40 @@ const statusIconFor = (status: string) => {
   if (terminalStatuses.includes(status)) return CircleDashed;
   return LoaderCircle;
 };
+const measurementStepClassFor = (status: string) => {
+  if (status === "PASSED") return "border-positive/30 bg-positive/5";
+  if (status === "FAILED") return "border-destructive/30 bg-destructive/5";
+  if (status === "SKIPPED") return "border-muted-foreground/20 bg-muted/40";
+  if (status === "RUNNING") return "border-primary/30 bg-primary/5";
+  return "border-border bg-background";
+};
+const measurementStepBadgeClassFor = (status: string) => {
+  if (status === "PASSED") return "border-positive/40 text-positive";
+  if (status === "FAILED") return "border-destructive/40 text-destructive";
+  if (status === "RUNNING") return "border-primary/40 text-primary";
+  return "text-muted-foreground";
+};
+const measurementResultBadgeClassFor = (status: string) => {
+  if (status === "MEASUREMENT_RESULT_PASS") return "border-positive/40 text-positive";
+  if (status === "MEASUREMENT_RESULT_FAIL") return "border-destructive/40 text-destructive";
+  if (status === "MEASUREMENT_RESULT_ATTENTION") return "border-attention/60 text-attention";
+  return "text-muted-foreground";
+};
+const conditionDescriptionFor = (result: MeasurementResult) => {
+  if (!result.condition) return "";
+  const unit = result.unit ? ` ${result.unit}` : "";
+  if (result.condition === "between") return `${result.lowerBound} to ${result.upperBound}${unit}`;
+  if (result.condition === "above" || result.condition === "at_least") {
+    return `${result.condition === "above" ? ">" : ">="} ${result.lowerBound}${unit}`;
+  }
+  if (result.condition === "below" || result.condition === "at_most") {
+    return `${result.condition === "below" ? "<" : "<="} ${result.upperBound}${unit}`;
+  }
+  if (result.condition === "equals" && result.requiredValue !== undefined && result.requiredValue !== null) {
+    return `= ${result.requiredValue}${unit}`;
+  }
+  return result.condition;
+};
 const mqttStatusFor = (script: GatewayScript) => {
   const activeExecution = executionFor(script);
   return connection.value?.scripts
@@ -141,8 +201,14 @@ const detailsFor = (script: GatewayScript): ScriptExecution => latestRunFor(scri
   lastHeartbeatAt: mqttStatusFor(script)?.lastHeartbeatAt ?? null,
   startedAt: Date.now(),
   log: [],
+  steps: [],
 };
 const displayStatusFor = (script: GatewayScript) => mqttStatusFor(script)?.status ?? executionFor(script)?.status ?? "IDLE";
+const scrollToActiveStep = async () => {
+  await nextTick();
+  const activeStep = measurementStepsArea.value?.querySelector<HTMLElement>("[data-step-status='RUNNING']");
+  activeStep?.scrollIntoView({behavior: "smooth", block: "nearest"});
+};
 
 const refreshScripts = async () => {
   if (!gatewayUrl.value) return;
@@ -161,12 +227,21 @@ const refreshScripts = async () => {
     executions.value = await executionResponse.json() as ScriptExecution[];
     if (selectedExecution.value) {
       selectedExecution.value = executions.value.find((execution) => execution.executionId === selectedExecution.value?.executionId) ?? selectedExecution.value;
+      if (isRunDialogOpen.value) void scrollToActiveStep();
     }
     scriptsError.value = null;
   } catch (error) {
     scriptsError.value = error instanceof Error ? error.message : "Could not load scripts";
   }
 };
+
+watch(
+  [selectedExecution, isRunDialogOpen],
+  () => {
+    if (isRunDialogOpen.value) void scrollToActiveStep();
+  },
+  {deep: true},
+);
 
 const openExecution = (execution: ScriptExecution | undefined) => {
   if (!execution) return;
@@ -359,25 +434,65 @@ onBeforeUnmount(() => {
         </div>
 
         <Dialog v-model:open="isRunDialogOpen">
-          <DialogContent v-if="selectedExecution" class="w-[min(90vw,56rem)] max-w-none max-h-[90vh] overflow-hidden">
+          <DialogContent v-if="selectedExecution" class="flex max-h-[calc(100dvh-2rem)] w-[calc(100%-1rem)] flex-col overflow-hidden p-4 sm:w-[calc(100%-2rem)] sm:p-6 lg:w-3/5 max-w-none sm:max-w-none">
             <DialogHeader>
               <DialogTitle>{{ selectedExecution.script.name }}</DialogTitle>
               <DialogDescription>
                 Run {{ selectedExecution.executionId }} · {{ selectedExecution.script.description || "Script execution details" }}
               </DialogDescription>
             </DialogHeader>
-            <Tabs default-value="details" class="min-w-0">
+            <Tabs default-value="details" class="flex min-h-0 min-w-0 flex-1 flex-col">
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="log">Log ({{ selectedExecution.log.length }})</TabsTrigger>
               </TabsList>
-              <TabsContent value="details" class="grid min-w-0 gap-3 text-sm">
-                <div class="flex justify-between border-b pb-2"><span class="text-muted-foreground">Status</span><Badge>{{ selectedExecution.status }}</Badge></div>
-                <div class="flex min-w-0 justify-between gap-4 border-b pb-2"><span class="text-muted-foreground">Execution ID</span><code class="min-w-0 break-all text-right">{{ selectedExecution.executionId }}</code></div>
-                <div class="flex justify-between border-b pb-2"><span class="text-muted-foreground">Started</span><span>{{ new Date(selectedExecution.startedAt).toLocaleString() }}</span></div>
-                <div class="flex min-w-0 justify-between gap-4 border-b pb-2"><span class="text-muted-foreground">Runner</span><span class="min-w-0 break-all text-right">{{ selectedExecution.script.runner }}</span></div>
-                <div class="flex justify-between"><span class="text-muted-foreground">Heartbeat</span><span>{{ selectedExecution.heartbeatId }}</span></div>
-                <div class="flex justify-between"><span class="text-muted-foreground">Last heartbeat</span><span>{{ selectedExecution.lastHeartbeatAt ? new Date(selectedExecution.lastHeartbeatAt).toLocaleString() : "—" }}</span></div>
+              <TabsContent value="details" class="grid min-h-0 min-w-0 flex-1 gap-3 overflow-hidden text-sm lg:grid-cols-2 lg:gap-x-8">
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Status</span><Badge class="h-fit w-fit whitespace-nowrap sm:justify-self-end">{{ selectedExecution.status }}</Badge></div>
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Execution ID</span><code class="min-w-0 break-all text-left sm:text-right">{{ selectedExecution.executionId }}</code></div>
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Started</span><span class="min-w-0 break-words text-left sm:text-right">{{ new Date(selectedExecution.startedAt).toLocaleString() }}</span></div>
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Runner</span><span class="min-w-0 break-words text-left sm:text-right">{{ selectedExecution.script.runner }}</span></div>
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Heartbeat</span><span class="min-w-0 break-words text-left sm:text-right">{{ selectedExecution.heartbeatId }}</span></div>
+                <div class="grid min-w-0 grid-cols-1 gap-1 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4"><span class="text-muted-foreground">Last heartbeat</span><span class="min-w-0 break-words text-left sm:text-right">{{ selectedExecution.lastHeartbeatAt ? new Date(selectedExecution.lastHeartbeatAt).toLocaleString() : "—" }}</span></div>
+                <div class="grid min-h-0 min-w-0 gap-3 pt-3 lg:col-span-2" v-if="selectedExecution.steps?.length">
+                  <div class="font-medium">Measurement steps</div>
+                  <ScrollArea class="h-auto min-h-24 min-w-0 flex-1 rounded-md border p-3">
+                    <div ref="measurementStepsArea" class="grid min-w-0 gap-3 pr-3">
+                      <div v-for="(step, index) in selectedExecution.steps ?? []" :key="step.id" :data-step-status="step.status" class="min-w-0 rounded-lg border p-3 transition-colors" :class="measurementStepClassFor(step.status)">
+                        <div class="flex min-w-0 items-start gap-3">
+                          <div class="flex size-7 shrink-0 items-center justify-center rounded-md border bg-background text-xs font-semibold text-muted-foreground">
+                            {{ index + 1 }}
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                              <div class="min-w-0">
+                                <div class="font-medium break-words">{{ step.title || step.id }}</div>
+                                <div class="break-all text-xs text-muted-foreground">{{ step.id }}</div>
+                              </div>
+                              <Badge variant="outline" class="shrink-0 whitespace-nowrap" :class="measurementStepBadgeClassFor(step.status)">{{ step.status }}</Badge>
+                            </div>
+                            <div v-if="step.description" class="mt-1 break-words text-muted-foreground">{{ step.description }}</div>
+                          </div>
+                        </div>
+                        <div v-if="step.results.length" class="mt-3 grid min-w-0 gap-2">
+                          <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Values</div>
+                          <div class="grid min-w-0 gap-2 sm:grid-cols-2">
+                            <div v-for="result in step.results" :key="`${step.id}-${result.key}-${result.recordedAt}`" class="min-w-0 rounded-md border bg-background/80 px-3 py-2">
+                              <div class="flex min-w-0 items-baseline justify-between gap-3">
+                                <span class="min-w-0 break-words text-xs text-muted-foreground">{{ result.key }}</span>
+                                <Badge v-if="result.status && result.status !== 'MEASUREMENT_RESULT_INFO'" variant="outline" class="shrink-0 text-[10px]" :class="measurementResultBadgeClassFor(result.status)">{{ result.status.replace("MEASUREMENT_RESULT_", "") }}</Badge>
+                              </div>
+                              <code class="mt-1 block min-w-0 break-all text-sm">{{ result.value }}<span v-if="result.unit" class="ml-1 text-muted-foreground">{{ result.unit }}</span></code>
+                              <div v-if="result.condition || result.tolerance !== null && result.tolerance !== undefined" class="mt-1 text-xs text-muted-foreground">
+                                <span v-if="result.condition">Condition: {{ conditionDescriptionFor(result) }}</span><span v-else>Required: {{ result.requiredValue }} ± {{ result.tolerance }}<span v-if="result.unit" class="ml-1">{{ result.unit }}</span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-if="step.error" class="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 break-words text-destructive">{{ step.error }}</div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </div>
               </TabsContent>
               <TabsContent value="log">
                 <ScrollArea class="h-[min(55vh,28rem)] min-w-0 rounded-md border bg-muted/30 p-3">
