@@ -26,7 +26,7 @@ invoke('init_plugins');
         <header>
           <Navbar/>
         </header>
-        <article class="p-5 justify-self-center flex w-full lg:w-3/4 justify-center">
+        <article class="p-5 justify-self-center flex w-full xl:w-3/4 justify-center">
           <Suspense>
             <router-view :key="$route.path" class="justify-self-center w-full" v-slot="{ Component }">
               <keep-alive>

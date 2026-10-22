@@ -717,10 +717,10 @@
   resolved "https://registry.yarnpkg.com/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz#8ace5259254426ccef57f3175bc64ed7095ed919"
   integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
-"@lucide/vue@^1.60.0":
-  version "1.60.0"
-  resolved "https://registry.yarnpkg.com/@lucide/vue/-/vue-1.60.0.tgz#61a18712a945a27e5500af12cf6d6fd381d7e642"
-  integrity sha512-rARqkhMbeBa+YWgDNInZavBAt+FUxdEyOx/gfrMZ466im0EnBTWgSKBra08bHhnRytyv4AGucf1+9AhrEDQqMA==
+"@lucide/vue@^1.61.0":
+  version "1.61.0"
+  resolved "https://registry.yarnpkg.com/@lucide/vue/-/vue-1.61.0.tgz#1f8b18b7d6e45032a7db47e645334577845ae891"
+  integrity sha512-XYclbwUQ6Mvf0UskBG9gJH91BdF3VK4Tt6Pv8PSntwPwNnf357PCQnma4TrzOEdwD49UYCtsTafpfytRIxm1cQ==
 
 "@mapbox/node-pre-gyp@^2.0.0":
   version "2.0.0"
