@@ -2,7 +2,7 @@ import {ref, reactive, onUnmounted, shallowRef} from 'vue';
 
 const DRAG_THRESHOLD = 5;
 
-type DragType = 'device' | 'connection';
+type DragType = 'device' | 'connection' | 'tab';
 
 interface DragState {
     type: DragType | null;
@@ -69,9 +69,6 @@ function hitTest(x: number, y: number): Target | null {
     return best;
 }
 
-/**
- * CORE ENGINE (single source of truth)
- */
 function useDragCore() {
     let dragging = false;
     let startX = 0;
@@ -206,12 +203,6 @@ function useDragCore() {
         ghost,
     };
 }
-
-/**
- * =========================
- * BACKWARD COMPATIBILITY API
- * =========================
- */
 
 export function useDragSource() {
     const core = useDragCore();

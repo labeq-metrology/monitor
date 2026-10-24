@@ -32,7 +32,7 @@
           <Button :variant="'ghost'" class="h-6 mr-0"
                   @click.prevent="router.push({
                               name: 'device-terminal',
-                              params: { connectionId: route.params.connectionId as string, id: device?.uuid }
+                              params: { connectionId: props.connectionId, id: device?.uuid }
                             })"
           >
             <Icon icon="heroicons:command-line" class="scale-150 px-0" width="24" height="24"/>
@@ -51,21 +51,38 @@
       <AlertTitle>Connection inactive!</AlertTitle>
       <AlertDescription>Activate the connection in order to use this panel.</AlertDescription>
     </Alert>
-    <article
-        class="grid"
-        :style="{
-          gridTemplateRows: `repeat(${layout?.rows.length || 1}, 1fr)`
-        }"
-    >
-      <div v-for="(row, i) in layout?.rows ?? []" :key="i">
-        <h3 v-if="row.groupName" class="text-lg my-1">{{ row.groupName }}</h3>
-        <div class="grid gap-4 place-self-start" :style="
-          {
-            gridTemplateColumns: `repeat(${row.columns.length || 1}, minmax(0, 1fr))`
-          }
-        ">
+
+    <article class="flex flex-col">
+      <div v-for="(row, i) in layout?.rows ?? []" :key="i" class="my-2">
+
+        <!-- Group Header with group update & refresh icons -->
+        <div class="flex items-center gap-2 mb-1" v-if="row.groupName">
+          <h3 class="text-lg">{{ row.groupName }}</h3>
+          <div class="flex items-center gap-1">
+            <Button
+                v-if="isGroupDirty(row)"
+                variant="ghost"
+                class="h-6 w-6 p-0 text-primary hover:text-primary/80 transition-colors animate-in fade-in"
+                @click="writeGroupParameters(row)"
+                title="Write group parameters to device"
+            >
+              <Icon icon="heroicons:arrow-up-tray" width="18" height="18"/>
+            </Button>
+            <Button
+                variant="ghost"
+                class="h-6 w-6 p-0 text-muted-foreground hover:text-foreground transition-colors"
+                @click="readGroupParameters(row)"
+                title="Refresh group parameters"
+            >
+              <Icon icon="heroicons:arrow-path" width="18" height="18"/>
+            </Button>
+          </div>
+        </div>
+
+        <div class="grid gap-4 place-self-start"
+             :style="{ gridTemplateColumns: `repeat(${row.columns.length || 1}, minmax(0, 1fr))` }">
           <div v-for="(column, j) in row.columns" :key="j" class="flex flex-col">
-            <div v-for="(panel, i) in column.panels" :key="i" class="min-w-0">
+            <div v-for="(panel, k) in column.panels" :key="k" class="min-w-0">
               <div class="flex items-center gap-2 mt-2 h-4">
                 <Label
                     :for="`${device?.uuid},${panel.parameter}`"
@@ -74,7 +91,33 @@
                   {{ panel.displayName || panel.parameter }}
                 </Label>
 
-                <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                <div class="flex items-center justify-center shrink-0 gap-1 h-4">
+                  <Button
+                      v-if="panel.kind !== 'action'"
+                      variant="ghost"
+                      class="h-5 w-5 p-0 text-muted-foreground hover:text-foreground transition-colors"
+                      @click="readParameter(panel.parameter)"
+                      title="Refresh parameter"
+                      :disabled="isParameterRefreshing(panel.parameter).value"
+                  >
+                    <Icon
+                        icon="heroicons:arrow-path"
+                        width="14"
+                        height="14"
+                        :class="{ 'animate-spin opacity-50': isParameterRefreshing(panel.parameter).value }"
+                    />
+                  </Button>
+
+                  <Button
+                      v-if="dirtyParameters[panel.parameter] && panel.kind !== 'action'"
+                      variant="ghost"
+                      class="h-5 w-5 p-0 text-primary hover:text-primary/80 transition-colors animate-in fade-in"
+                      @click="writeParameter(panel.parameter)"
+                      title="Write to device"
+                  >
+                    <Icon icon="heroicons:arrow-up-tray" width="16" height="16"/>
+                  </Button>
+
                   <Tooltip v-if="!!errors[panel.parameter]">
                     <TooltipTrigger class="flex items-center">
                       <Icon
@@ -90,13 +133,19 @@
                   </Tooltip>
                 </div>
               </div>
+
               <div class="mt-2">
                 <DevicePanel
+                    v-if="parameters[panel.parameter]"
                     :id="`${device?.uuid},${panel.parameter}`"
                     :definition="panel"
                     v-model:data="parameters[panel.parameter].value"
                     v-model:error="errors[panel.parameter]"
-                    :refreshing="refreshing"/>
+                    :processing="isParameterProcessing(panel.parameter).value"
+                    :refreshing="isParameterRefreshing(panel.parameter).value"
+                    @dirty="dirtyParameters[panel.parameter] = true"
+                    @write="writeParameter(panel.parameter)"
+                />
               </div>
             </div>
           </div>
@@ -107,10 +156,10 @@
 </template>
 
 <script setup lang="ts">
-import {useRoute, useRouter} from "vue-router";
+import {useRouter} from "vue-router";
 import {invoke} from "@tauri-apps/api/core";
 import {computed, onBeforeUnmount, onMounted, provide, ref, watch} from "vue";
-import {LayoutSchema} from "@/lib/plugin.ts";
+import {LayoutRow, LayoutSchema} from "@/lib/plugin.ts";
 import DevicePanel from "@/components/monitor/device/DevicePanel.vue";
 import {Label} from "@/components/ui/label";
 import {Separator} from "@/components/ui/separator";
@@ -123,37 +172,64 @@ import useDeviceParameters from "@/composables/useDeviceParameters.ts";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 
-const route = useRoute();
+const props = defineProps<{ connectionId: string, id: string }>();
 const router = useRouter();
-
 let layout = ref<LayoutSchema | null>(null);
 
-const connectionStore = useConnectionStore()
-const device = useDevice();
+const connectionStore = useConnectionStore();
+const device = useDevice(props.connectionId, props.id);
+
 const {
   parameters,
   errors,
-  refreshing,
   autoupdate,
   refreshParameters,
+  readParameter,
+  writeParameter,
   writeAllParameters,
   activeWriteRequests,
   activeReadRequests,
-  publishListener
-} = useDeviceParameters(device, layout);
+  publishListener,
+  isParameterProcessing,
+  isParameterRefreshing,
+  dirtyParameters
+} = useDeviceParameters(props.connectionId, device, layout);
 
-const connectionActive = computed(() => connectionStore.connections.get(route.params.connectionId as string)?.state === 'Connected');
+const connectionActive = computed(() => connectionStore.connections.get(props.connectionId)?.state === 'Connected');
 
 provide('device', device);
 provide('plugin', device.value ? usePlugin(device.value) : null);
 
-if (!device) {
-  router.push("/");
-}
+if (!device) router.push("/");
+
+const isGroupDirty = (row: LayoutRow) => {
+  return row.columns.some(col =>
+      col.panels.some(panel => dirtyParameters[panel.parameter])
+  );
+};
+
+const writeGroupParameters = (row: LayoutRow) => {
+  row.columns.forEach(col => {
+    col.panels.forEach(panel => {
+      if (dirtyParameters[panel.parameter] && panel.kind !== 'action') {
+        writeParameter(panel.parameter);
+      }
+    });
+  });
+};
+
+const readGroupParameters = (row: LayoutRow) => {
+  row.columns.forEach(col => {
+    col.panels.forEach(panel => {
+      if (panel.kind !== 'action') {
+        readParameter(panel.parameter);
+      }
+    });
+  });
+};
 
 onMounted(async () => {
   if (!device.value) return;
-
   try {
     layout.value = await invoke<LayoutSchema>('load_layout', {
       driver: device.value.driver,
@@ -165,10 +241,7 @@ onMounted(async () => {
         for (const column of row.columns) {
           for (const panel of column.panels) {
             if (!parameters[panel.parameter]) {
-              parameters[panel.parameter] = {
-                paramType: '',
-                value: panel.default
-              };
+              parameters[panel.parameter] = {paramType: '', value: panel.default};
             }
           }
         }
@@ -179,15 +252,15 @@ onMounted(async () => {
   }
 });
 
+const hasInitiallyFetched = ref(false);
+
 const fetchDeviceData = async () => {
   if (!device.value) return;
-
   try {
     await invoke('update_device_parameters', {
-      connId: route.params.connectionId,
+      connId: props.connectionId,
       deviceId: device.value.uuid
     });
-
     await refreshParameters();
   } catch (error) {
     console.error("Failed to sync device parameters over active connection:", error);
@@ -195,7 +268,8 @@ const fetchDeviceData = async () => {
 };
 
 watch(connectionActive, async (isActive) => {
-  if (isActive) {
+  if (isActive && !hasInitiallyFetched.value) {
+    hasInitiallyFetched.value = true;
     await fetchDeviceData();
   }
 }, {immediate: true});
@@ -205,6 +279,4 @@ onBeforeUnmount(async () => {
 });
 </script>
 
-<style lang="scss" scoped>
-
-</style>`
+<style lang="scss" scoped></style>

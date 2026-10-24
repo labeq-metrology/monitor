@@ -34,6 +34,7 @@ const routes: RouteRecordRaw[] = [
     {
         path: "/connection/:connectionId/devices/:id",
         name: "device",
+        props: true, // WŁĄCZONO PROPS
         component: () => import("@/views/DeviceView.vue"),
         beforeEnter: (to) => {
             const connections = useConnectionStore();
@@ -82,4 +83,3 @@ registerEventListeners();
 app.use(router).use(pinia);
 
 app.mount('#app');
-

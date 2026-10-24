@@ -1,14 +1,12 @@
 import {useConnectionStore} from "@/store/connection.store.ts";
-import {useRoute} from "vue-router";
-import {computed} from "vue";
+import {computed, MaybeRefOrGetter, toValue} from "vue";
 
-export default () => {
+export default (connectionId: MaybeRefOrGetter<string>, deviceId: MaybeRefOrGetter<string>) => {
     const connections = useConnectionStore();
-    const route = useRoute();
 
     return computed(() =>
         connections.connections
-            ?.get(route.params.connectionId as string)
-            ?.devices.find(d => d.uuid === route.params.id)
+            ?.get(toValue(connectionId))
+            ?.devices.find(d => d.uuid === toValue(deviceId))
     );
 };

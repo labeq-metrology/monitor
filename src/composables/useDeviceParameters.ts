@@ -1,23 +1,34 @@
-import {computed, ComputedRef, reactive, Ref, ref} from "vue";
+import {computed, ComputedRef, reactive, Ref, ref, toValue, MaybeRefOrGetter} from "vue";
 import {LabeqDevice, ParameterInfo, ReadRequestResponse, UpdateMessage} from "@/lib/labeq.ts";
-import {useRoute} from "vue-router";
 import {LayoutSchema} from "@/lib/plugin.ts";
 import {listen} from "@tauri-apps/api/event";
 import {invoke} from "@tauri-apps/api/core";
 
-export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<LayoutSchema | null>) => {
-    const route = useRoute();
-
-    const autoupdate = ref(true); // TODO: Handle autoupdate from rust's side
+export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<LabeqDevice | undefined>, layout: Ref<LayoutSchema | null>) => {
+    const connIdStr = toValue(connectionId);
+    const autoupdate = ref(true);
 
     const parameters = reactive<Record<string, ParameterInfo>>(device.value?.parameters ?? {});
     const errors = reactive<Record<string, string>>({});
     const activeReadRequests = reactive<Map<string, string>>(new Map());
     const activeWriteRequests = reactive<Map<string, string>>(new Map());
 
+    const dirtyParameters = reactive<Record<string, boolean>>({});
+
     const refreshing = computed(() => activeReadRequests.size > 0);
 
+    const isParameterProcessing = (parameter: string) => computed(() =>
+        Array.from(activeReadRequests.values()).includes(parameter) ||
+        Array.from(activeWriteRequests.values()).includes(parameter)
+    );
+
+    const isParameterRefreshing = (parameter: string) => computed(() =>
+        Array.from(activeReadRequests.values()).includes(parameter)
+    );
+
     const handleRequest = (match: RegExpExecArray, e: any) => {
+        if (match.groups?.device !== device.value?.uuid) return;
+
         if (!match.groups || match.groups.action !== "resolve") return;
         if (
             !activeReadRequests.has(match.groups.request) &&
@@ -31,28 +42,38 @@ export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<Layout
         activeReadRequests.delete(match.groups.request);
         activeWriteRequests.delete(match.groups.request);
 
+        const paramName = parsedResponse.parameter;
+
         if (parsedResponse.error) {
-            errors[parsedResponse.parameter] = parsedResponse.error;
+            errors[paramName] = parsedResponse.error;
             return;
         }
 
-        parameters[parsedResponse.parameter] = parsedResponse.resolvedValue!;
-        delete errors[parsedResponse.parameter];
+        parameters[paramName] = parsedResponse.resolvedValue!;
+
+        delete errors[paramName];
+        delete dirtyParameters[paramName];
     };
 
     const handleUpdate = (match: RegExpExecArray, e: any) => {
+        if (match.groups?.device !== device.value?.uuid) return;
+
         if (!autoupdate.value || match.groups?.action !== "update") return;
         const parsedResponse = JSON.parse(
             new TextDecoder().decode(new Uint8Array(e.payload.event.payload))
         ) as UpdateMessage;
 
+        const paramName = match.groups!.parameter;
+
         if (parsedResponse.error) {
-            errors[match.groups!.parameter] = parsedResponse.error;
+            errors[paramName] = parsedResponse.error;
             return;
         }
 
-        parameters[match.groups!.parameter] = parsedResponse.newValue!;
-        delete errors[match.groups!.parameter];
+        parameters[paramName] = parsedResponse.newValue!;
+
+        delete errors[paramName];
+        delete dirtyParameters[paramName];
     };
 
     const publishListener = listen("mqtt-publish", (e: any) => {
@@ -74,7 +95,7 @@ export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<Layout
                     const uuid = crypto.randomUUID();
                     activeReadRequests.set(uuid, panel.parameter);
                     invoke("gateway_publish", {
-                        connId: route.params.connectionId as string,
+                        connId: connIdStr,
                         topic: `device/${device.value!.uuid}/parameters/${panel.parameter}/read`,
                         payload: JSON.stringify({
                             requestId: uuid,
@@ -88,10 +109,11 @@ export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<Layout
     };
 
     const readParameter = async (parameter: string) => {
+        if (!device.value) return;
         const uuid = crypto.randomUUID();
         activeReadRequests.set(uuid, parameter);
-        invoke("gateway_publish", {
-            connId: route.params.connectionId as string,
+        await invoke("gateway_publish", {
+            connId: connIdStr,
             topic: `device/${device.value!.uuid}/parameters/${parameter}/read`,
             payload: JSON.stringify({
                 requestId: uuid,
@@ -102,30 +124,31 @@ export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<Layout
     };
 
     const writeParameter = async (parameter: string) => {
-        console.log("hg")
         if (!device.value) return;
-        console.log("hg1")
         const uuid = crypto.randomUUID();
-        const res = await invoke("gateway_publish", {
-            connId: route.params.connectionId as string,
+        const paramToSend = parameters[parameter];
+
+        await invoke("gateway_publish", {
+            connId: connIdStr,
             topic: `device/${device.value.uuid}/parameters/${parameter}/write`,
             payload: JSON.stringify({
                 requestId: uuid,
-                contentType: "labeq/string",
-                value: parameters[parameter],
+                value: paramToSend,
             }),
             retain: false,
         });
-        console.log(res)
+
         activeWriteRequests.set(uuid, parameter);
+        delete dirtyParameters[parameter];
     };
 
     const writeAllParameters = async () => {
-        console.log("ghhg")
         if (!layout.value) return;
         layout.value.rows.forEach(row =>
             row.columns.forEach(column =>
-                column.panels.forEach(panel => writeParameter(panel.parameter))
+                column.panels.forEach(panel => {
+                    if (!panel.readonly) writeParameter(panel.parameter);
+                })
             )
         );
     };
@@ -137,10 +160,13 @@ export default (device: ComputedRef<LabeqDevice | undefined>, layout: Ref<Layout
         refreshing,
         activeReadRequests,
         activeWriteRequests,
+        dirtyParameters,
         refreshParameters,
         readParameter,
         writeParameter,
         writeAllParameters,
         publishListener,
+        isParameterProcessing,
+        isParameterRefreshing
     };
 }
