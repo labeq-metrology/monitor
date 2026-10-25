@@ -34,7 +34,7 @@ const routes: RouteRecordRaw[] = [
     {
         path: "/connection/:connectionId/devices/:id",
         name: "device",
-        props: true, // WŁĄCZONO PROPS
+        props: true,
         component: () => import("@/views/DeviceView.vue"),
         beforeEnter: (to) => {
             const connections = useConnectionStore();
@@ -53,6 +53,7 @@ const routes: RouteRecordRaw[] = [
     {
         path: "/connection/:connectionId/devices/:id/terminal",
         name: "device-terminal",
+        props: true,
         component: () => import("@/views/DeviceTerminalView.vue"),
         beforeEnter: (to) => {
             const connections = useConnectionStore();

@@ -26,9 +26,28 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
         Array.from(activeReadRequests.values()).includes(parameter)
     );
 
+    const registerReadRequest = (uuid: string, parameter: string) => {
+        activeReadRequests.set(uuid, parameter);
+        setTimeout(() => {
+            if (activeReadRequests.has(uuid)) {
+                activeReadRequests.delete(uuid);
+                errors[parameter] = "Read request timed out";
+            }
+        }, 5000);
+    };
+
+    const registerWriteRequest = (uuid: string, parameter: string) => {
+        activeWriteRequests.set(uuid, parameter);
+        setTimeout(() => {
+            if (activeWriteRequests.has(uuid)) {
+                activeWriteRequests.delete(uuid);
+                errors[parameter] = "Write request timed out";
+            }
+        }, 5000);
+    };
+
     const handleRequest = (match: RegExpExecArray, e: any) => {
         if (match.groups?.device !== device.value?.uuid) return;
-
         if (!match.groups || match.groups.action !== "resolve") return;
         if (
             !activeReadRequests.has(match.groups.request) &&
@@ -57,13 +76,20 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
 
     const handleUpdate = (match: RegExpExecArray, e: any) => {
         if (match.groups?.device !== device.value?.uuid) return;
-
         if (!autoupdate.value || match.groups?.action !== "update") return;
+
         const parsedResponse = JSON.parse(
             new TextDecoder().decode(new Uint8Array(e.payload.event.payload))
         ) as UpdateMessage;
 
         const paramName = match.groups!.parameter;
+
+        for (const [key, val] of activeReadRequests.entries()) {
+            if (val === paramName) activeReadRequests.delete(key);
+        }
+        for (const [key, val] of activeWriteRequests.entries()) {
+            if (val === paramName) activeWriteRequests.delete(key);
+        }
 
         if (parsedResponse.error) {
             errors[paramName] = parsedResponse.error;
@@ -93,7 +119,7 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
             row.columns.forEach(column =>
                 column.panels.forEach(panel => {
                     const uuid = crypto.randomUUID();
-                    activeReadRequests.set(uuid, panel.parameter);
+                    registerReadRequest(uuid, panel.parameter);
                     invoke("gateway_publish", {
                         connId: connIdStr,
                         topic: `device/${device.value!.uuid}/parameters/${panel.parameter}/read`,
@@ -111,7 +137,7 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
     const readParameter = async (parameter: string) => {
         if (!device.value) return;
         const uuid = crypto.randomUUID();
-        activeReadRequests.set(uuid, parameter);
+        registerReadRequest(uuid, parameter);
         await invoke("gateway_publish", {
             connId: connIdStr,
             topic: `device/${device.value!.uuid}/parameters/${parameter}/read`,
@@ -126,7 +152,20 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
     const writeParameter = async (parameter: string) => {
         if (!device.value) return;
         const uuid = crypto.randomUUID();
-        const paramToSend = parameters[parameter];
+
+        const paramToSend = { ...parameters[parameter] };
+
+        if (!paramToSend.paramType || paramToSend.paramType === "") {
+            if (typeof paramToSend.value === "number") {
+                paramToSend.paramType = Number.isInteger(paramToSend.value) ? "IntegerValue" : "DoubleValue";
+            } else {
+                paramToSend.paramType = "StringValue";
+                paramToSend.value = String(paramToSend.value);
+            }
+        }
+
+        registerWriteRequest(uuid, parameter);
+        delete dirtyParameters[parameter];
 
         await invoke("gateway_publish", {
             connId: connIdStr,
@@ -137,9 +176,6 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
             }),
             retain: false,
         });
-
-        activeWriteRequests.set(uuid, parameter);
-        delete dirtyParameters[parameter];
     };
 
     const writeAllParameters = async () => {
