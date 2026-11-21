@@ -25,7 +25,7 @@
       </SidebarGroupLabel>
     <CollapsibleContent>
       <SidebarMenu>
-        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-background cursor-default select-none" v-if="!workspacesPresent && !isCreating">
+        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-card cursor-default select-none" v-if="!workspacesPresent && !isCreating">
           <EmptyHeader>No workspaces present...</EmptyHeader>
         </Empty>
 

@@ -26,8 +26,22 @@ pub struct LabeqPluginManifest {
     pub version: String,
     pub id: String,
     pub drivers: Vec<String>,
+    #[serde(default)]
+    pub panels: Vec<PanelPluginManifest>,
     pub author: Option<String>,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PanelPluginManifest {
+    pub id: String,
+    #[serde(default)]
+    pub execute: bool,
+    #[serde(default)]
+    pub bundle: Option<String>,
+    #[serde(default)]
+    pub style: Option<String>,
 }
 
 async fn get_plugin_by_driver(driver: &str) -> Result<String, String> {

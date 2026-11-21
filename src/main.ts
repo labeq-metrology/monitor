@@ -9,9 +9,13 @@ import * as PiniaRuntime from "pinia";
 import {createPinia} from "pinia";
 import {registerEventListeners} from "@/lib/eventHandler.ts";
 import {useConnectionStore} from "@/store/connection.store.ts";
+import {applyActiveTheme, initColorPalette, getStoredAppearanceMode, watchActiveTheme} from "@/lib/theme";
 
 (window as any).Vue = VueRuntime;
 (window as any).Pinia = PiniaRuntime;
+
+applyActiveTheme(initColorPalette(), getStoredAppearanceMode());
+watchActiveTheme(() => {});
 
 const routes: RouteRecordRaw[] = [
     {path: "/", component: WelcomeView},

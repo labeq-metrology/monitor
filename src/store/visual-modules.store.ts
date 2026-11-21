@@ -1,7 +1,6 @@
 import {defineStore} from 'pinia';
 import {computed, markRaw, ref} from 'vue';
-import {readDir, readTextFile} from '@tauri-apps/plugin-fs';
-import {appDataDir, join} from '@tauri-apps/api/path';
+import type {LabeqPluginManifest, PanelPluginManifest} from '@/lib/plugin.ts';
 
 interface VisualModelManifest {
     name: string;
@@ -14,6 +13,7 @@ interface VisualModelManifest {
     configSchema: any[];
     dataSchema?: any;
     metadata?: any;
+    panel: PanelPluginManifest;
 }
 
 interface LoadedModel {
@@ -25,8 +25,6 @@ interface LoadedModel {
 
 export const useVisualModelsStore = defineStore('visualModels', () => {
     const models = ref(new Map<string, LoadedModel>());
-    const modelsBasePath = ref('');
-    const loadedStyleIds = ref(new Set<string>());
 
     const allModels = computed(() => Array.from(models.value.values()));
 
@@ -44,180 +42,55 @@ export const useVisualModelsStore = defineStore('visualModels', () => {
         return Array.from(cats);
     });
 
-    async function initBasePath() {
+    function loadEmbeddedPanel(panel: PanelPluginManifest, plugin: LabeqPluginManifest): LoadedModel | null {
+        if (!panel.bundle) return null;
         try {
-            const appData = await appDataDir();
-            modelsBasePath.value = await join(appData, 'visual-models');
-            console.log(`Models path: ${modelsBasePath.value}`);
-        } catch (err) {
-            console.error('Failed to init base path:', err);
-            modelsBasePath.value = 'visual-models';
-        }
-    }
-
-    async function loadModel(modelId: string, modelPath: string): Promise<LoadedModel | null> {
-        try {
-            const manifestPath = await join(modelPath, 'manifest.json');
-            const manifestContent = await readTextFile(manifestPath);
-            const manifest: VisualModelManifest = JSON.parse(manifestContent);
-
-            const bundlePath = await join(modelPath, 'bundle.js');
-            const bundleContent = await readTextFile(bundlePath);
-
-            const cssPath = await join(modelPath, 'bundle.css');
-            let cssContent = '';
-            try {
-                cssContent = await readTextFile(cssPath);
-            } catch {
-                console.warn(`No CSS file for ${modelId}`);
-            }
-
-            if (cssContent) {
-                const styleId = `visual-model-style-${modelId}`;
-
-                const oldStyle = document.getElementById(styleId);
-                if (oldStyle) {
-                    oldStyle.remove();
-                    loadedStyleIds.value.delete(styleId);
-                }
-
-                const styleEl = document.createElement('style');
-                styleEl.id = styleId;
-                styleEl.textContent = cssContent;
-                document.head.appendChild(styleEl);
-                loadedStyleIds.value.add(styleId);
-
-                console.log(`Injected CSS for ${modelId}`);
-            }
-
-            if (typeof window !== 'undefined') {
-                (window as any).Vue = await import('vue');
-                (window as any).Pinia = await import('pinia');
-            }
-
-            const componentFactory = new Function('Vue', 'Pinia', `
-                const exports = {};
-                ${bundleContent}
-            `);
-
-            const component = componentFactory(
+            const component = new Function('Vue', 'Pinia', panel.bundle)(
                 (window as any).Vue,
                 (window as any).Pinia
             );
+            if (!component) throw new Error(`Panel ${panel.id} returned no component`);
 
-            if (!component) {
-                throw new Error(`Visual model ${modelId} does not export a component`);
-            }
-
-            const model: LoadedModel = {
-                id: modelId,
-                manifest,
+            const model = {
+                id: panel.id,
+                manifest: {
+                    name: panel.id,
+                    type: 'panel',
+                    version: plugin.version,
+                    description: plugin.description ?? '',
+                    configSchema: [],
+                    panel,
+                },
                 component: markRaw(component),
-                basePath: modelPath
+                basePath: `plugin:${plugin.id}`,
             };
-
-            models.value.set(modelId, model);
-
-            console.log(`Loaded: ${manifest.name} v${manifest.version}`);
-
+            models.value.set(panel.id, model);
             return model;
-        } catch (err: any) {
-            console.error('Load error:', err);
+        } catch (error) {
+            console.error(`Failed to load panel ${panel.id} from plugin ${plugin.id}:`, error);
             return null;
         }
     }
 
-    async function autoDiscoverModels() {
-        try {
-            if (!modelsBasePath.value) {
-                await initBasePath();
-            }
-
-            let entries;
-            try {
-                entries = await readDir(modelsBasePath.value);
-            } catch (err) {
-                console.warn(`Models directory not found: ${modelsBasePath.value}`);
-                return;
-            }
-
-            const modelDirs = entries.filter(entry => entry.isDirectory);
-
-            if (modelDirs.length === 0) {
-                console.warn('No visual models found');
-                return;
-            }
-
-            const loadPromises = modelDirs.map(async (entry) => {
-                try {
-                    const modelPath = await join(modelsBasePath.value, entry.name!);
-                    return await loadModel(entry.name!, modelPath);
-                } catch (err) {
-                    console.warn(`Skipping ${entry.name}:`, err);
-                    return null;
-                }
-            });
-
-            const results = await Promise.all(loadPromises);
-            const successCount = results.filter(r => r !== null).length;
-
-            console.log(`Successfully loaded ${successCount}/${modelDirs.length} model(s)`);
-        } catch (err: any) {
-            console.error('Auto-discovery error:', err);
-        }
+    function loadPluginPanels(plugins: LabeqPluginManifest[]) {
+        plugins.forEach(plugin => {
+            (plugin.panels ?? []).forEach(panel => loadEmbeddedPanel(panel, plugin));
+        });
     }
 
     function getModel(modelId: string): LoadedModel | undefined {
         return models.value.get(modelId);
     }
 
+    function isActionPanel(panelId: string): boolean {
+        return models.value.get(panelId)?.manifest.panel.execute === true;
+    }
+
     function getModelsByCategory(category: string): LoadedModel[] {
         return allModels.value.filter(m => m.manifest.category === category);
     }
 
-    function unloadModel(modelId: string): boolean {
-        const model = models.value.get(modelId);
-        if (!model) return false;
-
-        // Remove CSS
-        const styleId = `visual-model-style-${modelId}`;
-        const styleEl = document.getElementById(styleId);
-        if (styleEl) {
-            styleEl.remove();
-            loadedStyleIds.value.delete(styleId);
-            console.log(`🗑️  Removed CSS for ${modelId}`);
-        }
-
-        // Remove model
-        const deleted = models.value.delete(modelId);
-        if (deleted) {
-            console.log(`🗑️  Unloaded model: ${modelId}`);
-        }
-
-        return deleted;
-    }
-
-    async function reloadModel(modelId: string): Promise<LoadedModel | null> {
-        const existing = models.value.get(modelId);
-        if (!existing) {
-            return null;
-        }
-
-        unloadModel(modelId);
-        return await loadModel(modelId, existing.basePath);
-    }
-
     function clearModels() {
-        // Remove all CSS
-        loadedStyleIds.value.forEach(styleId => {
-            const styleEl = document.getElementById(styleId);
-            if (styleEl) {
-                styleEl.remove();
-            }
-        });
-        loadedStyleIds.value.clear();
-
-        // Clear models
         models.value.clear();
         console.log('🗑️  Cleared all models');
     }
@@ -226,8 +99,6 @@ export const useVisualModelsStore = defineStore('visualModels', () => {
     return {
         // State
         models,
-        modelsBasePath,
-
         // Getters
         allModels,
         modelCount,
@@ -235,13 +106,10 @@ export const useVisualModelsStore = defineStore('visualModels', () => {
         categories,
 
         // Actions
-        initBasePath,
-        loadModel,
-        autoDiscoverModels,
         getModel,
+        loadPluginPanels,
+        isActionPanel,
         getModelsByCategory,
-        unloadModel,
-        reloadModel,
         clearModels
     };
 });

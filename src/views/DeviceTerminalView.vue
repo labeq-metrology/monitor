@@ -135,14 +135,14 @@ onBeforeUnmount(async () => {
         <CardTitle>Parameters</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table class="text-xs w-full">
+        <Table class="text-xs w-full table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead class="w-[80px] lg:table-cell hidden" />
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead class="w-[25%] truncate">Name</TableHead>
+              <TableHead class="w-[15%] truncate">Type</TableHead>
+              <TableHead class="w-[25%] truncate">Value</TableHead>
+              <TableHead class="truncate">Status</TableHead>
             </TableRow>
           </TableHeader>
           <template v-for="[name, parameter] in Object.entries(parameters).sort()" :key="name">
@@ -173,26 +173,37 @@ onBeforeUnmount(async () => {
                   </Button>
                 </div>
               </TableCell>
-              <TableCell class="text-muted-foreground font-mono">{{ name }}</TableCell>
-              <TableCell>{{ parameter.paramType }}</TableCell>
-              <TableCell>
+
+              <TableCell class="text-muted-foreground font-mono truncate" :title="name">
+                {{ name }}
+              </TableCell>
+
+              <TableCell class="truncate" :title="parameter.paramType">
+                {{ parameter.paramType }}
+              </TableCell>
+
+              <TableCell class="truncate" :title="String(parameter.value)">
                 <span :class="{ 'opacity-50 transition-opacity': isParameterProcessing(name).value }">
                   {{ parameter.value }}
                 </span>
               </TableCell>
-              <TableCell>
-                <!-- Real-time parameter state tracking explicitly showing the error content -->
+
+              <TableCell class="truncate">
                 <span v-if="isParameterProcessing(name).value" class="text-muted-foreground flex items-center gap-1 text-xs">
-                  <Icon icon="heroicons:arrow-path" class="animate-spin" width="14" height="14" /> Processing
+                  <Icon icon="heroicons:arrow-path" class="animate-spin shrink-0" width="14" height="14" /> Processing
                 </span>
-                <span v-else-if="errors[name]" class="text-destructive flex flex-col gap-0.5 text-xs">
+
+                <span v-else-if="errors[name]" class="text-destructive flex flex-col gap-0.5 text-xs truncate">
                   <div class="flex items-center gap-1">
-                    <Icon icon="heroicons:exclamation-triangle" width="14" height="14" /> Error
+                    <Icon icon="heroicons:exclamation-triangle" class="shrink-0" width="14" height="14" /> Error
                   </div>
-                  <span class="text-[10px] opacity-80 whitespace-normal">{{ errors[name] }}</span>
+                  <span class="text-[10px] opacity-80 truncate block w-full" :title="errors[name]">
+                    {{ errors[name] }}
+                  </span>
                 </span>
+
                 <span v-else class="text-green-500/80 flex items-center gap-1 text-xs">
-                  <Icon icon="heroicons:check-circle" width="14" height="14" /> OK
+                  <Icon icon="heroicons:check-circle" class="shrink-0" width="14" height="14" /> OK
                 </span>
               </TableCell>
             </TableRow>

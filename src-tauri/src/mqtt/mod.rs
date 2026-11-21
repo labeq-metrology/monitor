@@ -7,8 +7,9 @@ use rumqttc::{AsyncClient, ClientError, Event, MqttOptions, Packet, Publish, QoS
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Url};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use crate::mqtt::handler::handle_publish;
 
@@ -17,6 +18,7 @@ struct ConnectionHandle {
     task: Option<JoinHandle<()>>,
     connection: ConnectionData,
     connected: RwLock<bool>,
+    publish_lock: Arc<Mutex<()>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -144,6 +146,7 @@ pub async fn create_connection(
             task: None,
             connection: data,
             connected: RwLock::new(false),
+            publish_lock: Arc::new(Mutex::new(())),
         },
     );
 
@@ -178,7 +181,10 @@ pub async fn connection_activate(app: AppHandle, conn_id: String) -> Result<(), 
         .port()
         .unwrap_or(if use_tls { 8883 } else { 1883 });
 
-    let mut options = MqttOptions::new(&connection_data.id, host, port);
+    // A fresh broker client ID prevents a previous session or another Monitor
+    // instance from colliding with this activation.
+    let client_id = format!("{}-{}", connection_data.id, uuid::Uuid::new_v4());
+    let mut options = MqttOptions::new(client_id, host, port);
     if !connection_data.username.is_empty() {
         options.set_credentials(&connection_data.username, &connection_data.password);
     }
@@ -186,21 +192,12 @@ pub async fn connection_activate(app: AppHandle, conn_id: String) -> Result<(), 
 
     let (client, event_loop) = AsyncClient::new(options, 10);
 
-    client
-        .subscribe("device/#", QoS::AtLeastOnce)
-        .await
-        .map_err(|e| format!("Subscription failed: {e}"))?;
-    client
-        .subscribe("script/#", QoS::AtLeastOnce)
-        .await
-        .map_err(|e| format!("Subscription failed: {e}"))?;
-
     let task = spawn_event_loop(app.clone(), conn_id.clone(), event_loop);
 
     {
         let mut clients = MQTT_CLIENTS.write().await;
         if let Some(handle) = clients.get_mut(&conn_id) {
-            handle.client = Some(client);
+            handle.client = Some(client.clone());
             handle.task = Some(task);
             handle.connection.state = ConnectionState::Connecting;
         }
@@ -210,6 +207,15 @@ pub async fn connection_activate(app: AppHandle, conn_id: String) -> Result<(), 
     update_state(&app, |state: &mut AppState| {
         state.connections = connections;
     });
+
+    client
+        .subscribe("device/#", QoS::AtLeastOnce)
+        .await
+        .map_err(|e| format!("Subscription failed: {e}"))?;
+    client
+        .subscribe("script/#", QoS::AtLeastOnce)
+        .await
+        .map_err(|e| format!("Subscription failed: {e}"))?;
 
     _ = update_devices(app, &conn_id).await;
 
@@ -258,7 +264,7 @@ pub async fn gateway_publish(
     payload: String,
     retain: bool,
 ) -> Result<(), String> {
-    let (client, is_connected) = {
+    let (client, is_connected, publish_lock) = {
         let clients = MQTT_CLIENTS.read().await;
         let connection = clients
             .get(&conn_id)
@@ -269,16 +275,20 @@ pub async fn gateway_publish(
             .client
             .clone()
             .ok_or_else(|| "Connection not active".to_string())?;
+        let publish_lock = Arc::clone(&connection.publish_lock);
 
-        (client, is_connected)
+        (client, is_connected, publish_lock)
     };
 
     if !is_connected {
         return Err("Not connected to broker".to_string());
     }
 
+    let _publish_guard = publish_lock.lock().await;
     client
-        .publish(topic, QoS::AtLeastOnce, retain, payload)
+        // Device requests have their own response topic. Avoid QoS 1 PUBACK
+        // inflight collisions when a whole layout is refreshed or written.
+        .publish(topic, QoS::AtMostOnce, retain, payload)
         .await
         .map_err(|e| match e {
             ClientError::Request(_) | ClientError::TryRequest(_) => {

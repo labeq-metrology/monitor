@@ -38,6 +38,15 @@
             <Icon icon="heroicons:command-line" class="scale-150 px-0" width="24" height="24"/>
           </Button>
         </li>
+        <li v-if="showUnlockPendingRequests">
+          <Button
+                              variant="destructive"
+                              class="h-6 text-xs"
+                              @click="unlockPendingRequests"
+          >
+            Unlock pending requests
+          </Button>
+        </li>
       </ul>
     </header>
     <Separator class="mt-2 mb-2"/>
@@ -93,7 +102,7 @@
 
                 <div class="flex items-center justify-center shrink-0 gap-1 h-4">
                   <Button
-                      v-if="panel.kind !== 'action'"
+                      v-if="!panelStore.isActionPanel(panel.kind) && !panel.writeOnly"
                       variant="ghost"
                       class="h-5 w-5 p-0 text-muted-foreground hover:text-foreground transition-colors"
                       @click="readParameter(panel.parameter)"
@@ -109,7 +118,7 @@
                   </Button>
 
                   <Button
-                      v-if="dirtyParameters[panel.parameter] && panel.kind !== 'action'"
+                      v-if="dirtyParameters[panel.parameter] && !panelStore.isActionPanel(panel.kind)"
                       variant="ghost"
                       class="h-5 w-5 p-0 text-primary hover:text-primary/80 transition-colors animate-in fade-in"
                       @click="writeParameter(panel.parameter)"
@@ -171,6 +180,7 @@ import {Button} from "@/components/ui/button";
 import useDeviceParameters from "@/composables/useDeviceParameters.ts";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
+import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
 
 const props = defineProps<{ connectionId: string, id: string }>();
 const router = useRouter();
@@ -178,6 +188,7 @@ let layout = ref<LayoutSchema | null>(null);
 
 const connectionStore = useConnectionStore();
 const device = useDevice(props.connectionId, props.id);
+const panelStore = useVisualModelsStore();
 
 const {
   parameters,
@@ -189,6 +200,7 @@ const {
   writeAllParameters,
   activeWriteRequests,
   activeReadRequests,
+  unlockPendingRequests: unlockRequests,
   publishListener,
   isParameterProcessing,
   isParameterRefreshing,
@@ -196,6 +208,42 @@ const {
 } = useDeviceParameters(props.connectionId, device, layout);
 
 const connectionActive = computed(() => connectionStore.connections.get(props.connectionId)?.state === 'Connected');
+const showUnlockPendingRequests = ref(false);
+let unlockPromptTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch(
+    () => activeReadRequests.size + activeWriteRequests.size,
+    (pendingRequestCount) => {
+      showUnlockPendingRequests.value = false;
+      if (unlockPromptTimer) {
+        clearTimeout(unlockPromptTimer);
+        unlockPromptTimer = undefined;
+      }
+
+      if (pendingRequestCount > 0) {
+        unlockPromptTimer = setTimeout(() => {
+          showUnlockPendingRequests.value = true;
+          unlockPromptTimer = undefined;
+        }, 5000);
+      }
+    },
+    { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  if (unlockPromptTimer) clearTimeout(unlockPromptTimer);
+});
+
+const unlockPendingRequests = () => {
+  const requestCount = activeReadRequests.size + activeWriteRequests.size;
+  if (requestCount === 0) return;
+
+  const confirmed = window.confirm(
+      `Unlock ${requestCount} pending request${requestCount === 1 ? '' : 's'}? ` +
+      "Late responses for these requests will be ignored.",
+  );
+  if (confirmed) unlockRequests();
+};
 
 provide('device', device);
 provide('plugin', device.value ? usePlugin(device.value) : null);
@@ -211,7 +259,7 @@ const isGroupDirty = (row: LayoutRow) => {
 const writeGroupParameters = (row: LayoutRow) => {
   row.columns.forEach(col => {
     col.panels.forEach(panel => {
-      if (dirtyParameters[panel.parameter] && panel.kind !== 'action') {
+      if (dirtyParameters[panel.parameter] && !panelStore.isActionPanel(panel.kind)) {
         writeParameter(panel.parameter);
       }
     });
@@ -221,7 +269,7 @@ const writeGroupParameters = (row: LayoutRow) => {
 const readGroupParameters = (row: LayoutRow) => {
   row.columns.forEach(col => {
     col.panels.forEach(panel => {
-      if (panel.kind !== 'action') {
+      if (!panelStore.isActionPanel(panel.kind) && !panel.writeOnly) {
         readParameter(panel.parameter);
       }
     });

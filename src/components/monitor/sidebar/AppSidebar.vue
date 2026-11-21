@@ -14,7 +14,7 @@ const router = useRouter();
   <Sidebar variant="sidebar">
     <SidebarHeader @click="router.push('/')" class="cursor-pointer border-border h-9 border-y-1">
       <div class="px-2 text-foreground font-bold tracking-wider text-sm">
-        <h1>LabEq Monitor</h1>
+        <h1 class="labeq-brand">LabEq Monitor</h1>
       </div>
     </SidebarHeader>
     <SidebarContent>

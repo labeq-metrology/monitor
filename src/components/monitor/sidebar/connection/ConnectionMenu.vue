@@ -54,7 +54,7 @@
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
-        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-background cursor-default select-none" v-else>
+        <Empty class="h-9 min-h-9 max-h-9 p-0 md:p-0 text-muted-foreground text-xs rounded-md bg-card cursor-default select-none" v-else>
           <EmptyHeader>No connections present...</EmptyHeader>
         </Empty>
       </SidebarMenu>

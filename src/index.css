@@ -2,16 +2,100 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant labeq (&:is(.theme-labeq, .theme-labeq *));
+
+.theme-labeq {
+    --labeq-brand-light: #D97706;
+    --labeq-brand-hover: #B45309;
+    --labeq-brand-dark: #F59E0B;
+    --labeq-brand-subtle: #FFFBEB;
+    --labeq-ink: #262626;
+    --labeq-background-dark: #0A0A0A;
+    --labeq-text-dark: #FAFAFA;
+    --labeq-muted-light: #737373;
+    --labeq-muted-dark: #A3A3A3;
+
+    --background: #FAFAFA;
+    --foreground: #262626;
+    --card: #FFFFFF;
+    --card-foreground: #262626;
+    --popover: #FFFFFF;
+    --popover-foreground: #262626;
+    --secondary: #F5F5F5;
+    --secondary-foreground: #262626;
+    --muted: #F5F5F5;
+    --muted-foreground: #737373;
+    --primary: var(--labeq-brand-light);
+    --primary-hover: var(--labeq-brand-hover);
+    --primary-foreground: #262626;
+    --accent: var(--labeq-brand-subtle);
+    --accent-hover: #FEF3C7;
+    --accent-foreground: #262626;
+    --attention: var(--labeq-brand-light);
+    --border: #E5E5E5;
+    --input: #E5E5E5;
+    --ring: var(--labeq-brand-light);
+    --sidebar-primary: var(--labeq-brand-light);
+    --sidebar-primary-foreground: #262626;
+    --sidebar: #F5F5F5;
+    --sidebar-foreground: #262626;
+    --sidebar-accent: var(--labeq-brand-subtle);
+    --sidebar-accent-foreground: #262626;
+    --sidebar-border: #E5E5E5;
+    --sidebar-ring: var(--labeq-brand-light);
+}
+
+.dark.theme-labeq {
+    --background: #0A0A0A;
+    --foreground: #FAFAFA;
+    --card: #262626;
+    --card-foreground: #FAFAFA;
+    --popover: #262626;
+    --popover-foreground: #FAFAFA;
+    --primary: var(--labeq-brand-dark);
+    --primary-hover: var(--labeq-brand-hover);
+    --primary-foreground: #262626;
+    --secondary: #404040;
+    --secondary-foreground: #FAFAFA;
+    --muted: #262626;
+    --muted-foreground: #A3A3A3;
+    --accent: #404040;
+    --accent-hover: #525252;
+    --accent-foreground: #FAFAFA;
+    --attention: var(--labeq-brand-dark);
+    --border: #262626;
+    --input: #262626;
+    --ring: var(--labeq-brand-dark);
+    --sidebar: #171717;
+    --sidebar-foreground: #FAFAFA;
+    --sidebar-primary: var(--labeq-brand-dark);
+    --sidebar-primary-foreground: #262626;
+    --sidebar-accent: #262626;
+    --sidebar-accent-foreground: #FAFAFA;
+    --sidebar-border: #262626;
+    --sidebar-ring: var(--labeq-brand-dark);
+}
 
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-labeq-brand-light: var(--labeq-brand-light);
+    --color-labeq-brand-hover: var(--labeq-brand-hover);
+    --color-labeq-brand-dark: var(--labeq-brand-dark);
+    --color-labeq-brand-subtle: var(--labeq-brand-subtle);
+    --color-labeq-ink: var(--labeq-ink);
+    --color-labeq-background-dark: var(--labeq-background-dark);
+    --color-labeq-text-dark: var(--labeq-text-dark);
+    --color-labeq-muted-light: var(--labeq-muted-light);
+    --color-labeq-muted-dark: var(--labeq-muted-dark);
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
     --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
     --color-primary-foreground: var(--primary-foreground);
+    --color-accent-hover: var(--accent-hover);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-muted: var(--muted);
@@ -70,12 +154,14 @@
     --popover: theme('colors.zinc.50');
     --popover-foreground: oklch(0.141 0.005 285.823);
     --primary: oklch(0.21 0.006 285.885);
+    --primary-hover: oklch(0.274 0.006 286.033);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: theme('colors.zinc.200');
     --secondary-foreground: oklch(0.21 0.006 285.885);
     --muted: oklch(0.967 0.001 286.375);
     --muted-foreground: oklch(0.552 0.016 285.938);
     --accent: oklch(0.967 0.001 286.375);
+    --accent-hover: oklch(0.92 0.004 286.32);
     --accent-foreground: oklch(0.21 0.006 285.885);
     --destructive: theme('colors.rose.600');
     --destructive-foreground: theme('colors.rose.700');
@@ -108,12 +194,14 @@
     --popover: oklch(0.141 0.005 285.823);
     --popover-foreground: theme('colors.zinc.200');
     --primary: theme('colors.zinc.200');
+    --primary-hover: oklch(0.274 0.006 286.033);
     --primary-foreground: oklch(0.21 0.006 285.885);
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: theme('colors.zinc.200');
     --muted: oklch(0.274 0.006 286.033);
     --muted-foreground: oklch(0.705 0.015 286.067);
     --accent: oklch(0.274 0.006 286.033);
+    --accent-hover: oklch(0.38 0.01 286.033);
     --accent-foreground: theme('colors.zinc.200');
     --destructive: theme('colors.red.500');
     --destructive-foreground: theme('colors.red.500');
@@ -145,6 +233,11 @@
     body, html {
         @apply bg-background text-foreground;
     }
+}
+
+.labeq-brand,
+.labeq-brand * {
+    font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {

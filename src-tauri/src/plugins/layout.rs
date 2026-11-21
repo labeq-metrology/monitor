@@ -28,4 +28,6 @@ pub struct LayoutPanel {
     #[serde(rename = "displayName")]
     display_name: Option<String>,
     readonly: bool,
+    #[serde(default)]
+    write_only: bool,
 }

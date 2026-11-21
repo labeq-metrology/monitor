@@ -11,6 +11,7 @@
   >
     <span class="truncate text-xs pointer-events-none">{{ tab.title }}</span>
     <button
+        @pointerdown.stop
         @click.stop="$emit('close')"
         class="rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 p-1 flex items-center justify-center shrink-0 transition-opacity"
         :class="{ 'opacity-100': isActive }"
@@ -60,6 +61,7 @@ onMounted(() => {
 });
 
 const onPointerDown = (e: PointerEvent) => {
+  if ((e.target as HTMLElement).closest('button')) return;
   startDrag('tab', props.tab.id, props.tab.title, e);
 };
 </script>

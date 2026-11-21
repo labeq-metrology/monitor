@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 200" fill="none">
+  <g transform="translate(20, 15) scale(0.85)">
+    <polygon points="50,0 82,0 32,155 0,155" fill="#262626" />
+    <polygon points="188,45 220,45 170,200 138,200" fill="#262626" />
+    <path fill-rule="evenodd" d="M80.48,45 H176 L140.52,155 H45 L80.48,45 Z M94.68,63 L70.8,137 H126.32 L150.2,63 H94.68 Z" fill="#D97706" />
+  </g>
+  <text x="235" y="122" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="68" letter-spacing="1">
+    <tspan font-weight="800" fill="#262626">labeq</tspan>
+    <tspan font-weight="300" fill="#737373"> metrology</tspan>
+  </text>
+</svg>

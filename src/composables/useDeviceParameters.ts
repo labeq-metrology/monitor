@@ -12,6 +12,7 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
     const errors = reactive<Record<string, string>>({});
     const activeReadRequests = reactive<Map<string, string>>(new Map());
     const activeWriteRequests = reactive<Map<string, string>>(new Map());
+    const abandonedRequestIds = new Set<string>();
 
     const dirtyParameters = reactive<Record<string, boolean>>({});
 
@@ -28,38 +29,27 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
 
     const registerReadRequest = (uuid: string, parameter: string) => {
         activeReadRequests.set(uuid, parameter);
-        setTimeout(() => {
-            if (activeReadRequests.has(uuid)) {
-                activeReadRequests.delete(uuid);
-                errors[parameter] = "Read request timed out";
-            }
-        }, 5000);
     };
 
     const registerWriteRequest = (uuid: string, parameter: string) => {
         activeWriteRequests.set(uuid, parameter);
-        setTimeout(() => {
-            if (activeWriteRequests.has(uuid)) {
-                activeWriteRequests.delete(uuid);
-                errors[parameter] = "Write request timed out";
-            }
-        }, 5000);
     };
 
     const handleRequest = (match: RegExpExecArray, e: any) => {
         if (match.groups?.device !== device.value?.uuid) return;
         if (!match.groups || match.groups.action !== "resolve") return;
-        if (
-            !activeReadRequests.has(match.groups.request) &&
-            !activeWriteRequests.has(match.groups.request)
-        ) return;
+        const requestId = match.groups.request;
+        if (abandonedRequestIds.has(requestId)) return;
+        const wasReadRequest = activeReadRequests.has(requestId);
+        const wasWriteRequest = activeWriteRequests.has(requestId);
+        if (!wasReadRequest && !wasWriteRequest) return;
 
         const parsedResponse = JSON.parse(
             new TextDecoder().decode(new Uint8Array(e.payload.event.payload))
         ) as ReadRequestResponse;
 
-        activeReadRequests.delete(match.groups.request);
-        activeWriteRequests.delete(match.groups.request);
+        activeReadRequests.delete(requestId);
+        activeWriteRequests.delete(requestId);
 
         const paramName = parsedResponse.parameter;
 
@@ -118,9 +108,10 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
         layout.value.rows.forEach(row =>
             row.columns.forEach(column =>
                 column.panels.forEach(panel => {
+                    if (panel.writeOnly) return;
                     const uuid = crypto.randomUUID();
                     registerReadRequest(uuid, panel.parameter);
-                    invoke("gateway_publish", {
+                    void invoke("gateway_publish", {
                         connId: connIdStr,
                         topic: `device/${device.value!.uuid}/parameters/${panel.parameter}/read`,
                         payload: JSON.stringify({
@@ -128,6 +119,9 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
                             returnType: "same_as_input",
                         }),
                         retain: false,
+                    }).catch(() => {
+                        activeReadRequests.delete(uuid);
+                        errors[panel.parameter] = "Failed to send read request";
                     });
                 })
             )
@@ -189,6 +183,17 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
         );
     };
 
+    const unlockPendingRequests = () => {
+        for (const requestId of activeReadRequests.keys()) {
+            abandonedRequestIds.add(requestId);
+        }
+        for (const requestId of activeWriteRequests.keys()) {
+            abandonedRequestIds.add(requestId);
+        }
+        activeReadRequests.clear();
+        activeWriteRequests.clear();
+    };
+
     return {
         autoupdate,
         parameters,
@@ -201,6 +206,7 @@ export default (connectionId: MaybeRefOrGetter<string>, device: ComputedRef<Labe
         readParameter,
         writeParameter,
         writeAllParameters,
+        unlockPendingRequests,
         publishListener,
         isParameterProcessing,
         isParameterRefreshing

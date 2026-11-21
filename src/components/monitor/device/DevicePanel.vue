@@ -1,14 +1,24 @@
 <template>
-  <div class="relative w-full group">
+  <div
+      class="relative w-full group"
+      :aria-busy="pendingFormattingRequests > 0"
+  >
     <component
+        v-if="resolvedComponent"
         :is="resolvedComponent"
         v-bind="finalPanelProps"
         :value="formattedValue"
+        :model-value="formattedValue"
+        :data="formattedValue"
         v-model:error="error"
         :disabled="isPanelDisabled"
         @update:value="handlePanelUpdate"
+        @update:model-value="handlePanelUpdate"
         @execute="handleExecute"
     />
+    <div v-else class="text-xs text-destructive">
+      Panel plugin "{{ definition.kind }}" is not available.
+    </div>
 
     <div
         v-if="isPanelDisabled"
@@ -23,20 +33,12 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch, inject, Ref} from "vue";
+import {computed, inject, ref, Ref, watch} from "vue";
 import type {LayoutPanel} from "@/lib/plugin.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {LabeqDevice, ParameterValue} from "@/lib/labeq.ts";
 import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
 import {Icon} from "@iconify/vue";
-
-import TextPanel from "@/components/monitor/device/panels/TextPanel.vue";
-import NumberPanel from "@/components/monitor/device/panels/NumberPanel.vue";
-import NumberUnitPanel from "@/components/monitor/device/panels/NumberUnitPanel.vue";
-import ImagePanel from "@/components/monitor/device/panels/ImagePanel.vue";
-import ChartPanel from "@/components/monitor/device/panels/ChartPanel.vue";
-import VisualModelContainer from "@/components/monitor/device/panels/VisualModelContainer.vue";
-import ActionPanel from "@/components/monitor/device/panels/ActionPanel.vue";
 
 const props = defineProps<{
   definition: LayoutPanel,
@@ -48,29 +50,34 @@ const data = defineModel<ParameterValue>('data');
 const error = defineModel<string>('error');
 const emit = defineEmits(['dirty', 'write']);
 
-const basicPanels = {
-  text: TextPanel,
-  number: NumberPanel,
-  "number-unit": NumberUnitPanel,
-  chart: ChartPanel,
-  image: ImagePanel,
-  action: ActionPanel,
-} as const;
-
 const visualModels = useVisualModelsStore();
 
 const resolvedComponent = computed(() => {
-  if (Object.keys(basicPanels).includes(props.definition.kind)) return basicPanels[props.definition.kind as keyof typeof basicPanels];
-  if (visualModels.models.has(props.definition.kind)) return VisualModelContainer;
+  return visualModels.getModel(props.definition.kind)?.component;
 });
 
 const device = inject<Ref<LabeqDevice | undefined>>('device');
 
 const formattedValue = ref("");
-const isFormatting = ref(false);
+const pendingFormattingRequests = ref(0);
+const latestFormattingRequest = ref(0);
 const lastSyncedRaw = ref<ParameterValue | undefined>(undefined);
 
-const isPanelDisabled = computed(() => props.processing || props.refreshing || isFormatting.value);
+const isPanelDisabled = computed(() => props.processing || props.refreshing);
+
+const beginFormatting = () => {
+  pendingFormattingRequests.value += 1;
+  const requestId = latestFormattingRequest.value + 1;
+  latestFormattingRequest.value = requestId;
+  return requestId;
+};
+
+const endFormatting = () => {
+  pendingFormattingRequests.value = Math.max(
+    0,
+    pendingFormattingRequests.value - 1,
+  );
+};
 
 watch(() => data.value, async (newRawValue) => {
   if (newRawValue === lastSyncedRaw.value) return;
@@ -79,22 +86,23 @@ watch(() => data.value, async (newRawValue) => {
     return;
   }
 
-  isFormatting.value = true;
+  const requestId = beginFormatting();
   try {
-    const result = await invoke<string>('format_param_to_panel', {
+    const formatted = await invoke<string>('format_param_to_panel', {
       driver: device.value.driver,
       variant: device.value.model,
       parameter: props.definition.parameter,
       value: newRawValue
     });
-
-    formattedValue.value = result;
+    if (requestId === latestFormattingRequest.value) {
+      formattedValue.value = formatted;
+    }
     lastSyncedRaw.value = newRawValue;
     error.value = "";
   } catch (err) {
     error.value = "Failed to format parameter for display.";
   } finally {
-    isFormatting.value = false;
+    endFormatting();
   }
 }, { immediate: true });
 
@@ -103,7 +111,7 @@ const handlePanelUpdate = async (newVal: string) => {
 
   formattedValue.value = newVal;
 
-  isFormatting.value = true;
+  const requestId = beginFormatting();
   try {
     const raw = await invoke<ParameterValue>('format_panel_to_param', {
       driver: device.value.driver,
@@ -112,7 +120,8 @@ const handlePanelUpdate = async (newVal: string) => {
       value: newVal
     });
 
-    if (JSON.stringify(raw) !== JSON.stringify(data.value)) {
+    if (requestId === latestFormattingRequest.value &&
+        JSON.stringify(raw) !== JSON.stringify(data.value)) {
       lastSyncedRaw.value = raw;
       data.value = raw;
       error.value = "";
@@ -121,14 +130,14 @@ const handlePanelUpdate = async (newVal: string) => {
   } catch (err) {
     error.value = "Failed to prepare parameter for device.";
   } finally {
-    isFormatting.value = false;
+    endFormatting();
   }
 };
 
 const handleExecute = async (executeVal: string) => {
   if (!device?.value?.driver || !device?.value?.model) return;
 
-  isFormatting.value = true;
+  beginFormatting();
   try {
     const raw = await invoke<ParameterValue>('format_panel_to_param', {
       driver: device.value.driver,
@@ -144,15 +153,15 @@ const handleExecute = async (executeVal: string) => {
   } catch (err) {
     error.value = "Failed to prepare action.";
   } finally {
-    isFormatting.value = false;
+    endFormatting();
   }
 };
 
 const finalPanelProps = computed(() => ({
-  model: props.definition.kind,
   parameter: props.definition.parameter,
   readonly: props.definition.readonly,
   disabled: isPanelDisabled.value,
-  refreshing: props.refreshing
+  refreshing: props.refreshing,
+  panel: props.definition.kind
 }));
 </script>
