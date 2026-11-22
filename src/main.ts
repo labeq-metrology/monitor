@@ -17,6 +17,7 @@ import {applyActiveTheme, initColorPalette, getStoredAppearanceMode, watchActive
 applyActiveTheme(initColorPalette(), getStoredAppearanceMode());
 watchActiveTheme(() => {});
 
+
 const routes: RouteRecordRaw[] = [
     {path: "/", component: WelcomeView},
     {path: "/new-connection", component: NewConnectionView},

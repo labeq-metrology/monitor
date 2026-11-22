@@ -1,4 +1,24 @@
 <template>
+  <ConfirmDialog
+      :open="removingWorkspaceConnectionId !== null"
+      @update:open="open => { if (!open) removingWorkspaceConnectionId = null }"
+      title="Remove from workspace"
+      :description="removingWorkspaceDeviceCount > 0
+        ? `This will also remove ${removingWorkspaceDeviceCount} associated device${removingWorkspaceDeviceCount === 1 ? '' : 's'} from this workspace.`
+        : 'Remove this connection from the workspace?'"
+      confirm-label="Remove"
+      destructive
+      @confirm="confirmRemoveFromWorkspace"
+  />
+  <ConfirmDialog
+      :open="removingConnectionId !== null"
+      @update:open="open => { if (!open) removingConnectionId = null }"
+      title="Remove connection"
+      :description="`Remove connection '${removingConnectionId ? connectionStore.connections.get(removingConnectionId)?.name : ''}' globally?`"
+      confirm-label="Remove"
+      destructive
+      @confirm="confirmRemoveConnection"
+  />
   <AlertDialog v-model:open="isAddingConnection">
     <AddConnectionDialog :workspace-id="workspaceId" @confirm="handleAddConnection"/>
   </AlertDialog>
@@ -41,13 +61,12 @@
                   v-else
                   ref="nameInput"
                   v-model="editingName"
-                  @blur="confirmEdit"
                   @keyup.enter="confirmEdit"
                   @keyup.esc="cancelEdit"
                   @click.stop
                   class="
                   text-xs font-normal
-                  text-left flex-1
+                  text-left w-32 shrink-0
                   bg-background border border-border rounded px-1
                   focus:outline-none focus:ring-1 focus:ring-ring
                   text-foreground
@@ -99,14 +118,13 @@
           <input
               ref="subfolderNameInput"
               v-model="newSubfolderName"
-              @blur="handleSubfolderBlur"
               @keyup.enter="confirmCreateSubfolder"
               @keyup.esc="cancelCreateSubfolder"
               @click.stop
               placeholder="Folder name..."
               class="
                 text-xs font-normal
-                text-left flex-1
+                text-left w-32 shrink-0
                 bg-background border border-border rounded px-1
                 focus:outline-none focus:ring-1 focus:ring-ring
                 text-foreground
@@ -160,6 +178,10 @@
                 <Icon icon="heroicons:arrow-path"/>
                 Refresh
               </ContextMenuItem>
+              <ContextMenuItem @click="handleRemoveFromWorkspace(item.value)" variant="destructive">
+                <Icon icon="heroicons:trash"/>
+                Remove from workspace
+              </ContextMenuItem>
               <ContextMenuItem @click="handleRemoveConnection(item.value)" variant="destructive">
                 <Icon icon="heroicons:trash"/>
                 Remove
@@ -178,11 +200,12 @@ import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu";
 import {AlertDialog} from "@/components/ui/alert-dialog";
 import AddConnectionDialog from "@/components/monitor/dialogs/AddConnectionDialog.vue";
-import type {NestedFolder} from "@/lib/labeq.js";
+import type {Item, NestedFolder} from "@/lib/labeq.js";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {computed, nextTick, onMounted, ref, watchEffect} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.js";
 import {useDragSource, useDragTarget} from "@/composables/useDrag.ts";
+import ConfirmDialog from "@/components/monitor/dialogs/ConfirmDialog.vue";
 
 const props = defineProps<{
   folder: NestedFolder<string>
@@ -213,18 +236,43 @@ const isCreatingSubfolder = ref(false);
 const newSubfolderName = ref("");
 const subfolderNameInput = ref<HTMLInputElement | null>(null);
 const isAddingConnection = ref(false);
+const removingConnectionId = ref<string | null>(null);
+const removingWorkspaceConnectionId = ref<string | null>(null);
+const removingWorkspaceDeviceCount = ref(0);
 
 const itemCount = computed(() => {
   return props.folder.items.filter(item => item.type === 'item').length;
 });
+
+const countAssociatedDevices = (connectionId: string): number => {
+  const workspace = store.workspaces.get(props.workspaceId);
+  if (!workspace) return 0;
+
+  let count = 0;
+  const walk = (items: Item<[string, string]>[]) => {
+    for (const item of items) {
+      if (item.type === 'item') {
+        if (item.value[0] === connectionId) count++;
+      } else {
+        walk(item.value.items);
+      }
+    }
+  };
+  walk(workspace.devices.items);
+  return count;
+};
 
 // Folder editing
 const startEditing = () => {
   isEditing.value = true;
   editingName.value = props.folder.name;
   nextTick(() => {
-    nameInput.value?.focus();
-    nameInput.value?.select();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        nameInput.value?.focus();
+        nameInput.value?.select();
+      });
+    });
   });
 };
 
@@ -246,11 +294,15 @@ const handleDelete = async () => {
 
 // Subfolder creation
 const handleAddSubfolder = () => {
-  window.setTimeout(() => {
-    isOpen.value = true;
-    isCreatingSubfolder.value = true;
-    nextTick(() => subfolderNameInput.value?.focus());
-  }, 0);
+  isOpen.value = true;
+  isCreatingSubfolder.value = true;
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        subfolderNameInput.value?.focus();
+      });
+    });
+  });
 };
 
 const handleAddConnection = async (connectionId: string) => {
@@ -272,24 +324,30 @@ const confirmCreateSubfolder = async () => {
   }
 };
 
-const handleSubfolderBlur = () => {
-  window.setTimeout(() => {
-    if (newSubfolderName.value.trim()) {
-      confirmCreateSubfolder();
-    } else {
-      cancelCreateSubfolder();
-    }
-  }, 150);
-};
-
 const cancelCreateSubfolder = () => {
   newSubfolderName.value = "";
   isCreatingSubfolder.value = false;
 };
 
-const handleRemoveConnection = async (connectionId: string) => {
-  if (confirm('Remove this connection from workspace?')) {
-    await store.removeConnectionFromWorkspace(props.workspaceId, connectionId);
-  }
+const handleRemoveFromWorkspace = (connectionId: string) => {
+  removingWorkspaceDeviceCount.value = countAssociatedDevices(connectionId);
+  removingWorkspaceConnectionId.value = connectionId;
+};
+
+const confirmRemoveFromWorkspace = async () => {
+  if (!removingWorkspaceConnectionId.value) return;
+  await store.removeConnectionFromWorkspace(props.workspaceId, removingWorkspaceConnectionId.value);
+  removingWorkspaceConnectionId.value = null;
+  removingWorkspaceDeviceCount.value = 0;
+};
+
+const handleRemoveConnection = (connectionId: string) => {
+  removingConnectionId.value = connectionId;
+};
+
+const confirmRemoveConnection = async () => {
+  if (!removingConnectionId.value) return;
+  await connectionStore.removeConnection(removingConnectionId.value);
+  removingConnectionId.value = null;
 };
 </script>

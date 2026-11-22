@@ -22,7 +22,7 @@ export const useConnectionStore = defineStore('connections', () => {
     });
 
     listen<AppState>('app-state-update', (e) => {
-        const ids = new Set(e.payload.workspaces.map(w => w.id));
+        const ids = new Set(e.payload.connections.map(connection => connection.id));
         for (const key of connections.keys()) {
             if (!ids.has(key)) connections.delete(key);
         }
@@ -41,12 +41,16 @@ export const useConnectionStore = defineStore('connections', () => {
     const deactivateConnection = async (connId: string) => {
         await invoke('connection_deactivate', {connId});
     };
+    const removeConnection = async (connId: string) => {
+        await invoke<void>('connection_remove', {connId});
+    };
 
 
     return {
         connections,
         refreshDeviceList,
         activateConnection,
-        deactivateConnection
+        deactivateConnection,
+        removeConnection
     };
 });

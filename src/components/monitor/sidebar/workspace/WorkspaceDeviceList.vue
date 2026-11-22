@@ -32,7 +32,6 @@
               <input
                   ref="folderNameInput"
                   v-model="newFolderName"
-                  @blur="handleFolderBlur"
                   @keyup.enter="confirmCreateFolder"
                   @keyup.esc="cancelCreateFolder"
                   @click.stop
@@ -142,6 +141,7 @@ const isCreatingFolder = ref(false);
 const isAddingDevice = ref(false);
 const newFolderName = ref("");
 const folderNameInput = ref<HTMLInputElement | null>(null);
+
 const handleDeviceConfirm = async (connectionId: string, deviceId: string) => {
   isAddingDevice.value = false;
 
@@ -157,9 +157,11 @@ const handleDeviceConfirm = async (connectionId: string, deviceId: string) => {
 const startCreatingFolder = () => {
   isCreatingFolder.value = true;
   nextTick(() => {
-    setTimeout(() => {
-      folderNameInput.value?.focus();
-    }, 200);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        folderNameInput.value?.focus();
+      });
+    });
   });
 };
 
@@ -173,24 +175,8 @@ const confirmCreateFolder = async () => {
   }
 };
 
-const handleFolderBlur = () => {
-  setTimeout(() => {
-    if (newFolderName.value.trim()) {
-      confirmCreateFolder();
-    } else {
-      cancelCreateFolder();
-    }
-  }, 150);
-};
-
 const cancelCreateFolder = () => {
   newFolderName.value = "";
   isCreatingFolder.value = false;
 };
-
-// const handleRemoveDevice = async (deviceId: string) => {
-//   if (confirm('Remove this device from workspace?')) {
-//     await store.removeDeviceFromWorkspace(props.workspaceId, deviceId);
-//   }
-// };
 </script>

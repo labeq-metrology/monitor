@@ -1,6 +1,16 @@
 export interface AppState {
     connections: LabeqConnection[];
     workspaces: LabeqWorkspace[];
+    dirtyWorkspaces?: string[];
+    general: {
+        schemaVersion: number;
+        activeWorkspaceId?: string;
+    };
+    appearance: {
+        schemaVersion: number;
+        colorPalette: string;
+        mode: "light" | "dark";
+    };
 }
 
 export type ParameterValue = string | number | number[];
@@ -59,6 +69,18 @@ export interface LabeqWorkspace {
     name: string;
     connections: Folder<string>;
     devices: Folder<string>;
+}
+
+export interface MissingWorkspaceDevice {
+    connectionId: string;
+    deviceUuid: string;
+}
+
+export interface WorkspaceLoadReport {
+    workspaceId: string;
+    workspaceName: string;
+    missingConnections: string[];
+    missingDevices: MissingWorkspaceDevice[];
 }
 
 export interface ReadRequestResponse {

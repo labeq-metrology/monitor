@@ -16,15 +16,14 @@
         <input
             ref="nameInput"
             v-model="workspaceName"
-            @blur="handleBlur"
             @keyup.enter="confirmCreate"
             @keyup.esc="cancelCreate"
             @click.stop
             placeholder="Workspace name..."
             class="
             py-0 items-center text-xs font-normal tracking-wide
-            text-left max-w-8/12
-            bg-background border border-border rounded
+            text-left w-32 shrink-0
+            bg-background border border-border rounded px-1
             focus:outline-none focus:ring-1 focus:ring-ring
             text-foreground
             placeholder:text-muted-foreground
@@ -49,7 +48,11 @@ const workspaceName = ref("");
 const nameInput = ref<HTMLInputElement | null>(null);
 
 onMounted(() => {
-  nameInput.value?.focus();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      nameInput.value?.focus();
+    });
+  });
 });
 
 const confirmCreate = () => {
@@ -58,17 +61,6 @@ const confirmCreate = () => {
   } else {
     emit('cancel');
   }
-};
-
-const handleBlur = () => {
-  // Small delay to allow click events to process
-  setTimeout(() => {
-    if (workspaceName.value.trim()) {
-      emit('create', workspaceName.value.trim());
-    } else {
-      emit('cancel');
-    }
-  }, 150);
 };
 
 const cancelCreate = () => {

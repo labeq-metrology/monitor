@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Url};
+use tauri::{AppHandle, Emitter, Manager, Url};
 use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use crate::mqtt::handler::handle_publish;
@@ -67,6 +67,23 @@ impl From<Publish> for MqttPublish {
 lazy_static! {
     static ref MQTT_CLIENTS: RwLock<HashMap<String, ConnectionHandle>> =
         RwLock::new(HashMap::new());
+}
+
+pub async fn restore_connections(connections: Vec<ConnectionData>) {
+    let mut clients = MQTT_CLIENTS.write().await;
+    for connection in connections {
+        let id = connection.id.clone();
+        clients.insert(
+            id,
+            ConnectionHandle {
+                client: None,
+                task: None,
+                connection,
+                connected: RwLock::new(false),
+                publish_lock: Arc::new(Mutex::new(())),
+            },
+        );
+    }
 }
 
 #[tauri::command]
@@ -154,6 +171,21 @@ pub async fn create_connection(
     update_state(&app, |state: &mut AppState| {
         state.connections = connections;
     });
+    if let Some(store) = app.try_state::<crate::state::persistence::StateStore>() {
+        if let Some(connection) = MQTT_CLIENTS
+            .read()
+            .await
+            .get(&conn_id)
+            .map(|handle| handle.connection.clone())
+        {
+            if let Err(error) = store.save_connection(&connection) {
+                let _ = app.emit(
+                    "state-save-error",
+                    serde_json::json!({"operation": "connection", "error": error.to_string()}),
+                );
+            }
+        }
+    }
 
     Ok(())
 }
@@ -253,6 +285,11 @@ pub async fn connection_remove(app: AppHandle, conn_id: String) -> Result<(), St
     update_state(&app, |state: &mut AppState| {
         state.connections = connections;
     });
+    if let Some(store) = app.try_state::<crate::state::persistence::StateStore>() {
+        if let Err(error) = store.delete_connection(&conn_id) {
+            return Err(error.to_string());
+        }
+    }
 
     Ok(())
 }

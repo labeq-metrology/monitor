@@ -19,7 +19,7 @@
     --foreground: #262626;
     --card: #FFFFFF;
     --card-foreground: #262626;
-    --popover: #FFFFFF;
+    --popover: #FAFAFA;
     --popover-foreground: #262626;
     --secondary: #F5F5F5;
     --secondary-foreground: #262626;
@@ -32,7 +32,7 @@
     --accent-hover: #FEF3C7;
     --accent-foreground: #262626;
     --attention: var(--labeq-brand-light);
-    --border: #E5E5E5;
+    --border: #D4D4D4;
     --input: #E5E5E5;
     --ring: var(--labeq-brand-light);
     --sidebar-primary: var(--labeq-brand-light);
@@ -41,7 +41,7 @@
     --sidebar-foreground: #262626;
     --sidebar-accent: var(--labeq-brand-subtle);
     --sidebar-accent-foreground: #262626;
-    --sidebar-border: #E5E5E5;
+    --sidebar-border: #D4D4D4;
     --sidebar-ring: var(--labeq-brand-light);
 }
 
@@ -50,7 +50,7 @@
     --foreground: #FAFAFA;
     --card: #262626;
     --card-foreground: #FAFAFA;
-    --popover: #262626;
+    --popover: #0A0A0A;
     --popover-foreground: #FAFAFA;
     --primary: var(--labeq-brand-dark);
     --primary-hover: var(--labeq-brand-hover);
@@ -63,8 +63,8 @@
     --accent-hover: #525252;
     --accent-foreground: #FAFAFA;
     --attention: var(--labeq-brand-dark);
-    --border: #262626;
-    --input: #262626;
+    --border: #404040;
+    --input: #404040;
     --ring: var(--labeq-brand-dark);
     --sidebar: #171717;
     --sidebar-foreground: #FAFAFA;

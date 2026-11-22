@@ -31,4 +31,4 @@ reqwest = { version = "0.13.1", features = ["json"] }
 tauri-plugin-prevent-default = { version = "4", features = ["platform-windows"] }
 uuid = "1.19.0"
 regex = "1.12.2"
-
+rfd = "0.15.4"

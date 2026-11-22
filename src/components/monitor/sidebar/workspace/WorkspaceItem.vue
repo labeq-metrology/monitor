@@ -29,7 +29,7 @@
                       group-data-[state=closed]/collapsible:group-hover/collapsible:text-foreground
                     "
                 >
-                  {{ workspace.name }}
+                  {{ workspace.name }}{{ workspaceStore.dirtyWorkspaceIds.has(workspace.id) ? ' *' : '' }}
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{{ workspace.name }}</p>
@@ -40,13 +40,12 @@
                 v-else
                 ref="nameInput"
                 v-model="editingName"
-                @blur="confirmEdit"
                 @keyup.enter="confirmEdit"
                 @keyup.esc="cancelEdit"
                 @click.stop
                 class="
                   text-xs font-normal tracking-wide
-                  text-left max-w-8/12
+                  text-left w-32 shrink-0
                   bg-background border border-border rounded px-1
                   focus:outline-none focus:ring-1 focus:ring-ring
                   text-foreground
@@ -56,6 +55,14 @@
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem @click="saveWorkspace">
+            <Icon icon="heroicons:document-arrow-down"/>
+            Save
+          </ContextMenuItem>
+          <ContextMenuItem @click="saveWorkspaceAs">
+            <Icon icon="heroicons:arrow-down-on-square"/>
+            Save As...
+          </ContextMenuItem>
           <ContextMenuItem @click="startEditing">
             <Icon icon="heroicons:pencil"/>
             Rename
@@ -97,10 +104,12 @@ import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} fr
 import {nextTick, ref} from "vue";
 import WorkspaceDeviceList from "@/components/monitor/sidebar/workspace/WorkspaceDeviceList.vue";
 import WorkspaceConnectionList from "@/components/monitor/sidebar/workspace/WorkspaceConnectionList.vue";
+import {useWorkspaceStore} from "@/store/workspace.store.ts";
 
 const props = defineProps<{
   workspace: LabeqWorkspace
 }>();
+const workspaceStore = useWorkspaceStore();
 
 const emit = defineEmits<{
   rename: [workspace: LabeqWorkspace, newName: string]
@@ -118,8 +127,12 @@ const startEditing = () => {
   isEditing.value = true;
   editingName.value = props.workspace.name;
   nextTick(() => {
-    nameInput.value?.focus();
-    nameInput.value?.select();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        nameInput.value?.focus();
+        nameInput.value?.select();
+      });
+    });
   });
 };
 
@@ -134,6 +147,9 @@ const cancelEdit = () => {
   editingName.value = props.workspace.name;
   isEditing.value = false;
 };
+
+const saveWorkspace = () => workspaceStore.saveWorkspace(props.workspace.id);
+const saveWorkspaceAs = () => workspaceStore.saveWorkspaceAs(props.workspace.id);
 
 const handleCreateFolder = (workspaceId: string, parentId: string | undefined, folderName: string) => {
   emit('createFolder', workspaceId, parentId, folderName);

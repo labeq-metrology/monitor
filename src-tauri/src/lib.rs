@@ -3,7 +3,11 @@ use crate::plugins::*;
 use crate::popup::open_popup_webview;
 use crate::state::workspace::*;
 use crate::state::{get_state, AppState};
+use crate::state::{mark_workspace_dirty, save_workspace, save_workspace_as, open_workspace, get_dirty_workspaces, confirm_close};
+use crate::state::{get_appearance, set_appearance, toggle_appearance, set_active_workspace, export_user_data, import_user_data};
+use crate::state::persistence::StateStore;
 use std::sync::Mutex;
+use tauri::{Emitter, Manager, WindowEvent};
 
 mod errors;
 mod mqtt;
@@ -17,7 +21,43 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(prevent_default())
-        .manage(Mutex::new(AppState::default()))
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    let dirty = window.app_handle()
+                        .state::<Mutex<AppState>>()
+                        .lock()
+                        .unwrap()
+                        .dirty_workspaces
+                        .clone();
+                    if !dirty.is_empty() {
+                        api.prevent_close();
+                        let _ = window.emit(
+                            "unsaved-work-warning",
+                            serde_json::json!({"workspaces": dirty}),
+                        );
+                    }
+                }
+            }
+        })
+        .setup(|app| {
+            let app_data_dir = app.path().app_data_dir()?;
+            let store = StateStore::new(app_data_dir)?;
+            let (connections, workspaces, general, appearance) = store.load()?;
+
+            let mut state = AppState::default();
+            state.connections = connections.clone();
+            state.workspaces = workspaces;
+            state.general = general;
+            state.appearance = appearance;
+            app.manage(Mutex::new(state));
+            app.manage(store);
+
+            tauri::async_runtime::spawn(async move {
+                restore_connections(connections).await;
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             create_workspace,
             delete_workspace,
@@ -36,6 +76,18 @@ pub fn run() {
             delete_connection_folder,
             move_connection_to_folder,
             get_state,
+            mark_workspace_dirty,
+            save_workspace,
+            save_workspace_as,
+            open_workspace,
+            get_dirty_workspaces,
+            confirm_close,
+            get_appearance,
+            set_appearance,
+            toggle_appearance,
+            set_active_workspace,
+            export_user_data,
+            import_user_data,
             test_connection,
             create_connection,
             connection_activate,

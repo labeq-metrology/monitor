@@ -1,5 +1,13 @@
 <template>
   <div>
+    <ConfirmDialog
+        v-model:open="showUnlockDialog"
+        title="Unlock pending requests"
+        :description="`Unlock ${activeReadRequests.size + activeWriteRequests.size} pending request${activeReadRequests.size + activeWriteRequests.size === 1 ? '' : 's'}? Late responses will be ignored.`"
+        confirm-label="Unlock"
+        destructive
+        @confirm="confirmUnlockPendingRequests"
+    />
     <header>
       <h2 class="text-xl">{{ device?.name }}</h2>
       <p class="text-muted-foreground">{{ device?.manufacturer }} &mdash; {{ device?.model }}</p>
@@ -181,6 +189,7 @@ import useDeviceParameters from "@/composables/useDeviceParameters.ts";
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
+import ConfirmDialog from "@/components/monitor/dialogs/ConfirmDialog.vue";
 
 const props = defineProps<{ connectionId: string, id: string }>();
 const router = useRouter();
@@ -209,6 +218,7 @@ const {
 
 const connectionActive = computed(() => connectionStore.connections.get(props.connectionId)?.state === 'Connected');
 const showUnlockPendingRequests = ref(false);
+const showUnlockDialog = ref(false);
 let unlockPromptTimer: ReturnType<typeof setTimeout> | undefined;
 
 watch(
@@ -237,12 +247,12 @@ onBeforeUnmount(() => {
 const unlockPendingRequests = () => {
   const requestCount = activeReadRequests.size + activeWriteRequests.size;
   if (requestCount === 0) return;
+  showUnlockDialog.value = true;
+};
 
-  const confirmed = window.confirm(
-      `Unlock ${requestCount} pending request${requestCount === 1 ? '' : 's'}? ` +
-      "Late responses for these requests will be ignored.",
-  );
-  if (confirmed) unlockRequests();
+const confirmUnlockPendingRequests = () => {
+  unlockRequests();
+  showUnlockDialog.value = false;
 };
 
 provide('device', device);

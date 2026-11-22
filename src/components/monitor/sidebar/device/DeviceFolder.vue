@@ -42,13 +42,12 @@
                   v-else
                   ref="nameInput"
                   v-model="editingName"
-                  @blur="confirmEdit"
                   @keyup.enter="confirmEdit"
                   @keyup.esc="cancelEdit"
                   @click.stop
                   class="
                   text-xs font-normal
-                  text-left flex-1
+                  text-left w-32 shrink-0
                   bg-background border border-border rounded px-1
                   focus:outline-none focus:ring-1 focus:ring-ring
                   text-foreground
@@ -91,14 +90,13 @@
           <input
               ref="subfolderNameInput"
               v-model="newSubfolderName"
-              @blur="handleSubfolderBlur"
               @keyup.enter="confirmCreateSubfolder"
               @keyup.esc="cancelCreateSubfolder"
               @click.stop
               placeholder="Folder name..."
               class="
                 text-xs font-normal
-                text-left flex-1
+                text-left w-32 shrink-0
                 bg-background border border-border rounded px-1
                 focus:outline-none focus:ring-1 focus:ring-ring
                 text-foreground
@@ -137,7 +135,7 @@ import AddDeviceDialog from "@/components/monitor/dialogs/AddDeviceDialog.vue";
 import type {Item, LabeqConnection, LabeqDevice, NestedFolder} from "@/lib/labeq.ts";
 import {computed, nextTick, onMounted, ref, watchEffect} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.ts";
-import {useConnectionStore} from "@/store/connection.store"; // <-- required
+import {useConnectionStore} from "@/store/connection.store";
 import {useDragTarget} from "@/composables/useDrag.ts";
 import DeviceButton from "@/components/monitor/sidebar/device/DeviceButton.vue";
 
@@ -159,8 +157,6 @@ const {isOver, register} = useDragTarget(
 onMounted(register);
 watchEffect(register);
 
-/* ------------------ helpers ------------------ */
-
 function flattenFolder<T>(folder: NestedFolder<T>): T[] {
   const result: T[] = [];
 
@@ -177,8 +173,6 @@ function flattenFolder<T>(folder: NestedFolder<T>): T[] {
   walk(folder.items);
   return result;
 }
-
-/* ------------------ computed ------------------ */
 
 type ResolvedDevice = {
   connection: LabeqConnection;
@@ -211,8 +205,6 @@ const itemCount = computed(() =>
     props.folder.items.filter(item => item.type === 'item').length
 );
 
-/* ------------------ UI state ------------------ */
-
 const isEditing = ref(false);
 const isOpen = ref(false);
 const editingName = ref(props.folder.name);
@@ -223,14 +215,16 @@ const newSubfolderName = ref("");
 const subfolderNameInput = ref<HTMLInputElement | null>(null);
 const isAddingDevice = ref(false);
 
-/* ------------------ actions ------------------ */
-
 const startEditing = () => {
   isEditing.value = true;
   editingName.value = props.folder.name;
   nextTick(() => {
-    nameInput.value?.focus();
-    nameInput.value?.select();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        nameInput.value?.focus();
+        nameInput.value?.select();
+      });
+    });
   });
 };
 
@@ -251,11 +245,15 @@ const handleDelete = async () => {
 };
 
 const handleAddSubfolder = () => {
-  window.setTimeout(() => {
-    isOpen.value = true;
-    isCreatingSubfolder.value = true;
-    nextTick(() => subfolderNameInput.value?.focus());
-  }, 0);
+  isOpen.value = true;
+  isCreatingSubfolder.value = true;
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        subfolderNameInput.value?.focus();
+      });
+    });
+  });
 };
 
 const handleAddDevice = async (connectionId?: string, deviceId?: string) => {
@@ -278,24 +276,8 @@ const confirmCreateSubfolder = async () => {
   }
 };
 
-const handleSubfolderBlur = () => {
-  window.setTimeout(() => {
-    if (newSubfolderName.value.trim()) {
-      confirmCreateSubfolder();
-    } else {
-      cancelCreateSubfolder();
-    }
-  }, 150);
-};
-
 const cancelCreateSubfolder = () => {
   newSubfolderName.value = "";
   isCreatingSubfolder.value = false;
 };
-
-// const handleRemoveDevice = async (deviceId: string) => {
-//   if (confirm('Remove this device from workspace?')) {
-//     await store.removeDeviceFromWorkspace(props.workspaceId, deviceId);
-//   }
-// };
 </script>

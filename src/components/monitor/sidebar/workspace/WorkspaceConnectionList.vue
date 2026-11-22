@@ -1,4 +1,24 @@
 <template>
+  <ConfirmDialog
+      :open="removingWorkspaceConnectionId !== null"
+      @update:open="open => { if (!open) removingWorkspaceConnectionId = null }"
+      title="Remove from workspace"
+      :description="removingWorkspaceDeviceCount > 0
+        ? `This will also remove ${removingWorkspaceDeviceCount} associated device${removingWorkspaceDeviceCount === 1 ? '' : 's'} from this workspace.`
+        : 'Remove this connection from the workspace?'"
+      confirm-label="Remove"
+      destructive
+      @confirm="confirmRemoveFromWorkspace"
+  />
+  <ConfirmDialog
+      :open="removingConnectionId !== null"
+      @update:open="open => { if (!open) removingConnectionId = null }"
+      title="Remove connection"
+      :description="`Remove connection '${removingConnectionId ? connectionStore.connections.get(removingConnectionId)?.name : ''}' globally?`"
+      confirm-label="Remove"
+      destructive
+      @confirm="confirmRemoveConnection"
+  />
   <AlertDialog v-model:open="isAddingConnection">
     <AddConnectionDialog :workspace-id="workspaceId" @confirm="handleAddConnection"/>
   </AlertDialog>
@@ -32,7 +52,6 @@
               <input
                   ref="folderNameInput"
                   v-model="newFolderName"
-                  @blur="handleFolderBlur"
                   @keyup.enter="confirmCreateFolder"
                   @keyup.esc="cancelCreateFolder"
                   @click.stop
@@ -94,6 +113,10 @@
                     <Icon icon="heroicons:arrow-path"/>
                     Refresh
                   </ContextMenuItem>
+                  <ContextMenuItem @click="handleRemoveFromWorkspace(item.value)" variant="destructive">
+                    <Icon icon="heroicons:trash"/>
+                    Remove from workspace
+                  </ContextMenuItem>
                   <ContextMenuItem @click="handleRemoveConnection(item.value)" variant="destructive">
                     <Icon icon="heroicons:trash"/>
                     Remove
@@ -136,7 +159,7 @@
 <script setup lang="ts">
 import {Icon} from "@iconify/vue";
 import ConnectionFolder from "../connection/ConnectionFolder.vue";
-import type {Folder} from "@/lib/labeq.ts";
+import type {Folder, Item} from "@/lib/labeq.ts";
 import {nextTick, onMounted, ref} from "vue";
 import {useWorkspaceStore} from "@/store/workspace.store.ts";
 import {
@@ -153,6 +176,7 @@ import AddConnectionDialog from "@/components/monitor/dialogs/AddConnectionDialo
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {useDragSource, useDragTarget} from "@/composables/useDrag.ts";
 import {FileTree} from "@/components/ui/file-tree";
+import ConfirmDialog from "@/components/monitor/dialogs/ConfirmDialog.vue";
 
 const props = defineProps<{
   workspaceId: string
@@ -173,9 +197,29 @@ onMounted(register);
 
 const isCreatingFolder = ref(false);
 const isAddingConnection = ref(false);
+const removingConnectionId = ref<string | null>(null);
+const removingWorkspaceConnectionId = ref<string | null>(null);
+const removingWorkspaceDeviceCount = ref(0);
 const newFolderName = ref("");
 const folderNameInput = ref<HTMLInputElement | null>(null);
 
+const countAssociatedDevices = (connectionId: string): number => {
+  const workspace = store.workspaces.get(props.workspaceId);
+  if (!workspace) return 0;
+
+  let count = 0;
+  const walk = (items: Item<[string, string]>[]) => {
+    for (const item of items) {
+      if (item.type === 'item') {
+        if (item.value[0] === connectionId) count++;
+      } else {
+        walk(item.value.items);
+      }
+    }
+  };
+  walk(workspace.devices.items);
+  return count;
+};
 
 const handleAddConnection = async (selectedConnectionId: string) => {
   isAddingConnection.value = false;
@@ -190,9 +234,11 @@ const handleAddConnection = async (selectedConnectionId: string) => {
 const startCreatingFolder = () => {
   isCreatingFolder.value = true;
   nextTick(() => {
-    setTimeout(() => {
-      folderNameInput.value?.focus();
-    }, 200);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        folderNameInput.value?.focus();
+      });
+    });
   });
 };
 
@@ -206,24 +252,30 @@ const confirmCreateFolder = async () => {
   }
 };
 
-const handleFolderBlur = () => {
-  setTimeout(() => {
-    if (newFolderName.value.trim()) {
-      confirmCreateFolder();
-    } else {
-      cancelCreateFolder();
-    }
-  }, 150);
-};
-
 const cancelCreateFolder = () => {
   newFolderName.value = "";
   isCreatingFolder.value = false;
 };
 
-const handleRemoveConnection = async (connectionId: string) => {
-  if (confirm('Remove this connection from workspace?')) {
-    await store.removeConnectionFromWorkspace(props.workspaceId, connectionId);
-  }
+const handleRemoveFromWorkspace = (connectionId: string) => {
+  removingWorkspaceDeviceCount.value = countAssociatedDevices(connectionId);
+  removingWorkspaceConnectionId.value = connectionId;
+};
+
+const confirmRemoveFromWorkspace = async () => {
+  if (!removingWorkspaceConnectionId.value) return;
+  await store.removeConnectionFromWorkspace(props.workspaceId, removingWorkspaceConnectionId.value);
+  removingWorkspaceConnectionId.value = null;
+  removingWorkspaceDeviceCount.value = 0;
+};
+
+const handleRemoveConnection = (connectionId: string) => {
+  removingConnectionId.value = connectionId;
+};
+
+const confirmRemoveConnection = async () => {
+  if (!removingConnectionId.value) return;
+  await connectionStore.removeConnection(removingConnectionId.value);
+  removingConnectionId.value = null;
 };
 </script>

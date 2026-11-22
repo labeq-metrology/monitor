@@ -14,16 +14,15 @@ export const colorPalettes: ColorPaletteOption[] = [
   {value: "labeq", label: "LabEq", className: "theme-labeq"},
 ];
 
+const themeChangeEvent = "active-theme-change";
 const storageKey = "active-color-palette";
 const modeStorageKey = "active-appearance-mode";
-const themeChangeEvent = "active-theme-change";
 
 export function getStoredColorPalette(): ColorPalette {
   const stored = localStorage.getItem(storageKey);
   if (stored && isRegisteredPalette(stored)) {
     return stored;
   }
-
   return colorPalettes[0].value;
 }
 
@@ -107,7 +106,6 @@ export function watchColorPalette(onChange: (palette: ColorPalette) => void): ()
       applyAppearanceMode(getStoredAppearanceMode());
     }
   };
-
   window.addEventListener("storage", handler);
   let unlistenTheme: (() => void) | undefined;
   void listen<{palette: ColorPalette; mode: AppearanceMode}>(
@@ -135,12 +133,10 @@ export function watchActiveTheme(
     }>).detail;
     onChange(detail.palette, detail.mode);
   };
-
   window.addEventListener(themeChangeEvent, localHandler);
   const stopWatchingPalette = watchColorPalette(() => {
     onChange(getStoredColorPalette(), getStoredAppearanceMode());
   });
-
   return () => {
     window.removeEventListener(themeChangeEvent, localHandler);
     stopWatchingPalette();

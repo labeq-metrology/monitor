@@ -1,4 +1,12 @@
 <template>
+  <ConfirmDialog
+      v-model:open="showRemoveDialog"
+      title="Remove connection"
+      :description="`Remove connection '${props.connection.name}' globally?`"
+      confirm-label="Remove"
+      destructive
+      @confirm="confirmRemoveConnection"
+  />
   <CollapsibleTrigger class="group/connection cursor-pointer w-full rounded-md">
     <ContextMenu>
       <ContextMenuTrigger as-child class="text-sm text-accent-background">
@@ -48,7 +56,7 @@
           <Icon icon="heroicons:arrow-path"/>
           Refresh
         </ContextMenuItem>
-        <ContextMenuItem variant="destructive">
+        <ContextMenuItem @click="removeConnection" variant="destructive">
           <Icon icon="heroicons:trash"/>
           Remove
         </ContextMenuItem>
@@ -65,11 +73,23 @@ import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} fr
 import {useConnectionStore} from "@/store/connection.store.ts";
 import {SidebarMenuSubButton} from "@/components/ui/sidebar";
 import {useRouter} from "vue-router";
+import {ref} from "vue";
+import ConfirmDialog from "@/components/monitor/dialogs/ConfirmDialog.vue";
 
-defineProps<{
+const props = defineProps<{
   connection: LabeqConnection
 }>();
 
 const connectionStore = useConnectionStore();
 const router = useRouter();
+const showRemoveDialog = ref(false);
+
+const removeConnection = () => {
+  showRemoveDialog.value = true;
+};
+
+const confirmRemoveConnection = () => {
+  connectionStore.removeConnection(props.connection.id);
+  showRemoveDialog.value = false;
+};
 </script>

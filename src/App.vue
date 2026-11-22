@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import {invoke} from "@tauri-apps/api/core";
-import {onMounted} from "vue";
+import {computed, onMounted, ref} from "vue";
+import {listen} from "@tauri-apps/api/event";
+import {getCurrentWindow} from "@tauri-apps/api/window";
+import ConfirmDialog from "@/components/monitor/dialogs/ConfirmDialog.vue";
 
 import {Toaster} from '@/components/ui/sonner'
 import Navbar from "@/components/monitor/navbar/Navbar.vue";
@@ -14,8 +17,53 @@ import {useDragSource} from '@/composables/useDrag';
 import {useVisualModelsStore} from "@/store/visual-modules.store.ts";
 
 const {ghost} = useDragSource();
-useWorkspaceStore();
 const visualModels = useVisualModelsStore();
+const workspaceStore = useWorkspaceStore();
+const unsavedWorkspaceIds = ref<string[]>([]);
+const showCloseDialog = ref(false);
+void listen<{workspaces: string[]}>("unsaved-work-warning", event => {
+  unsavedWorkspaceIds.value = event.payload.workspaces;
+  showCloseDialog.value = true;
+});
+const saveAndClose = async () => {
+  for (const workspaceId of unsavedWorkspaceIds.value) {
+    await invoke("save_workspace", {workspaceId});
+  }
+  showCloseDialog.value = false;
+  await getCurrentWindow().close();
+};
+const closeWithoutSaving = async () => {
+  await invoke("confirm_close");
+  showCloseDialog.value = false;
+  await getCurrentWindow().close();
+};
+const workspaceLoadReportDescription = computed(() => {
+  const report = workspaceStore.loadReport;
+  if (!report) return "";
+  const connectionCount = report.missingConnections.length;
+  const deviceCount = report.missingDevices.length;
+  const parts = [];
+  if (connectionCount > 0) {
+    parts.push(`${connectionCount} connection${connectionCount === 1 ? "" : "s"}`);
+  }
+  if (deviceCount > 0) {
+    parts.push(`${deviceCount} device${deviceCount === 1 ? "" : "s"}`);
+  }
+  if (parts.length === 0) {
+    return `Workspace "${report.workspaceName}" was loaded successfully.`;
+  }
+  return `Workspace "${report.workspaceName}" was loaded, but ${parts.join(" and ")} could not be found.`;
+});
+const workspaceLoadReportDetails = computed(() => {
+  const report = workspaceStore.loadReport;
+  if (!report) return [];
+  return [
+    ...report.missingConnections.map(id => `Connection “${id}”`),
+    ...report.missingDevices.map(device =>
+      `Device “${device.deviceUuid}” from connection “${device.connectionId}”`
+    ),
+  ];
+});
 onMounted(async () => {
   try {
     (window as any).Vue = await import('vue');
@@ -43,6 +91,23 @@ onMounted(async () => {
 
 <template>
   <div>
+    <ConfirmDialog
+        :open="workspaceStore.loadReport !== null"
+        @update:open="open => { if (!open) workspaceStore.clearLoadReport() }"
+        title="Workspace load report"
+        :description="workspaceLoadReportDescription"
+        :details="workspaceLoadReportDetails"
+        confirm-label="Close"
+        @confirm="workspaceStore.clearLoadReport"
+    />
+    <ConfirmDialog
+        v-model:open="showCloseDialog"
+        title="Unsaved workspace changes"
+        :description="`${unsavedWorkspaceIds.length} workspace${unsavedWorkspaceIds.length === 1 ? '' : 's'} have unsaved changes. Save before closing?`"
+        confirm-label="Save and close"
+        @confirm="saveAndClose"
+        @cancel="closeWithoutSaving"
+    />
     <Toaster :toast-options="{ style: { } }"/>
     <SidebarProvider class="flex">
       <AppSidebar/>

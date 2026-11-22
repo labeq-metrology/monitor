@@ -1,13 +1,27 @@
 use crate::state::{update_state, AppState};
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
-#[derive(Default, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct LabeqWorkspace {
+    #[serde(default)]
+    pub schema_version: u32,
     pub id: String,
     pub name: String,
     pub connections: Folder<String>,
     pub devices: Folder<(String, String)>,
+}
+
+impl Default for LabeqWorkspace {
+    fn default() -> Self {
+        Self {
+            schema_version: 1,
+            id: String::new(),
+            name: String::new(),
+            connections: Folder::default(),
+            devices: Folder::default(),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -53,7 +67,13 @@ pub fn create_workspace(app: AppHandle, name: String) -> String {
 pub fn delete_workspace(app: AppHandle, workspace_id: String) {
     update_state(&app, |state: &mut AppState| {
         state.workspaces.retain(|w| w.id != workspace_id);
+        state.dirty_workspaces.retain(|id| id != &workspace_id);
+        state.workspace_files.remove(&workspace_id);
     });
+    if let Some(store) = app.try_state::<crate::state::persistence::StateStore>() {
+        let _ = store.delete_workspace(&workspace_id);
+        let _ = store.clear_workspace_recovery(&workspace_id);
+    }
 }
 
 #[tauri::command]
@@ -180,12 +200,20 @@ pub fn remove_connection_from_workspace(
     app: AppHandle,
     workspace_id: String,
     connection_id: String,
-) {
+) -> usize {
+    let mut removed_devices = 0;
     update_state(&app, |state: &mut AppState| {
         if let Some(workspace) = state.workspaces.iter_mut().find(|w| w.id == workspace_id) {
             remove_item_recursive(&mut workspace.connections.items, |id| id == &connection_id);
+            let before = count_items_recursive(&workspace.devices.items);
+            remove_item_recursive(&mut workspace.devices.items, |(connection, _)| {
+                connection == &connection_id
+            });
+            let after = count_items_recursive(&workspace.devices.items);
+            removed_devices = before.saturating_sub(after);
         }
     });
+    removed_devices
 }
 
 #[tauri::command]
@@ -362,4 +390,14 @@ where
         Item::Item(value) => predicate(value),
         Item::Folder(folder) => contains_item_recursive(&folder.items, predicate),
     })
+}
+
+fn count_items_recursive<T>(items: &[Item<T>]) -> usize {
+    items
+        .iter()
+        .map(|item| match item {
+            Item::Item(_) => 1,
+            Item::Folder(folder) => count_items_recursive(&folder.items),
+        })
+        .sum()
 }

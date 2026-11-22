@@ -53,7 +53,6 @@ const settingsStructure: { [key: string]: string[] } = {
 
 const route = useRoute();
 const router = useRouter();
-
 useColorMode();
 </script>
 
